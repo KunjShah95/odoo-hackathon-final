@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login as apiLogin, signup as apiSignup, getTrips } from './utils/api';
+import { login as apiLogin, signup as apiSignup, getTrips, updateTrip as apiUpdateTrip } from './utils/api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { User, Trip } from './types';
 import LoginScreen from './components/LoginScreen';
@@ -15,6 +15,8 @@ import BudgetScreen from './components/BudgetScreen';
 import CalendarScreen from './components/CalendarScreen';
 import SharedItineraryScreen from './components/SharedItineraryScreen';
 import ProfileScreen from './components/ProfileScreen';
+import AdminPanel from './components/AdminPanel';
+import PublicTripBoards from './components/PublicTripBoards';
 
 
 
@@ -26,32 +28,39 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (email: string, password: string) => {
-    setCurrentUser({
-      id: '1',
-      name: 'Varad Vekariya',
-      email: email,
-      avatar: 'https://media.licdn.com/dms/image/v2/D4E03AQE4iAklqcnVEA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1725693994480?e=1757548800&v=beta&t=_7JtktwgnzaZBX5-oZBnuS000YjdfbXDvPQ8Ds8oUjY'
-    });
-    setIsAuthenticated(true);
+  const handleLogin = async (email: string, password: string) => {
+    setAuthError(null);
+    setLoading(true);
+    try {
+      const res = await apiLogin(email, password);
+      const tokenVal = res.token;
+      setToken(tokenVal);
+      localStorage.setItem('token', tokenVal);
+      const user = {
+        id: String(res.user.id),
+        name: [res.user.first_name, res.user.last_name].filter(Boolean).join(' '),
+        email: res.user.email,
+        avatar: res.user.photo_url || undefined,
+        currency_preference: res.user.currency_preference
+      } as any; // adapt to User type
+      setCurrentUser(user);
+      const tripsData = await getTrips(tokenVal);
+      setTrips(tripsData);
+      setIsAuthenticated(true);
+    } catch (e: any) {
+      setAuthError(e.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignup = async (name: string, email: string, password: string) => {
     setAuthError(null);
     setLoading(true);
     try {
-      const res = await apiSignup({ name, email, password });
-      setToken(res.token);
-      // Combine first_name and last_name for frontend User type
-      const user = {
-        ...res.user,
-        name: [res.user.first_name, res.user.last_name].filter(Boolean).join(' ')
-      };
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      // Fetch trips after signup
-      const tripsRes = await getTrips(res.token);
-      setTrips(tripsRes.trips || []);
+      await apiSignup({ name, email, password });
+      // auto-login after signup
+      await handleLogin(email, password);
     } catch (err: any) {
       setAuthError(err.message || 'Signup failed');
     } finally {
@@ -67,13 +76,24 @@ function App() {
   };
 
   const addTrip = (trip: Trip) => setTrips(prev => [...prev, trip]);
-  const updateTrip = (tripId: string, updates: Partial<Trip>) => {
-    setTrips(prev => prev.map(trip => 
-      trip.id === tripId ? { ...trip, ...updates } : trip
-    ));
+  const updateTrip = async (tripId: string, updates: Partial<Trip>) => {
+    setTrips(prev => prev.map(trip => trip.id === tripId ? { ...trip, ...updates } : trip)); // optimistic
+    try {
+      if (token) {
+        const updated = await apiUpdateTrip(tripId, updates, token);
+        setTrips(prev => prev.map(t => t.id === tripId ? { ...t, ...updated } : t));
+      }
+    } catch (e) {
+      // revert? For now just log
+      console.error('Failed to persist trip update', e);
+    }
   };
   const deleteTrip = (tripId: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== tripId));
+  };
+
+  const cloneTrip = (trip: Trip) => {
+    setTrips(prev => [...prev, trip]);
   };
 
   if (!isAuthenticated) {
@@ -112,7 +132,9 @@ function App() {
           <Route path="/trip/:tripId/budget" element={<BudgetScreen {...commonProps} />} />
           <Route path="/trip/:tripId/calendar" element={<CalendarScreen {...commonProps} />} />
           <Route path="/trip/:tripId/share" element={<SharedItineraryScreen trips={trips} />} />
+          <Route path="/public-boards" element={<PublicTripBoards user={currentUser!} trips={trips} onCloneTrip={cloneTrip} />} />
           <Route path="/profile" element={<ProfileScreen user={currentUser!} onUpdateUser={setCurrentUser} onLogout={handleLogout} />} />
+          <Route path="/admin/*" element={<AdminPanel />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

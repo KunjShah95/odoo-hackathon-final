@@ -251,6 +251,14 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                           <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onUpdateTrip(trip.id, { isPublic: !trip.isPublic })}
+                          className="flex-1"
+                        >
+                          {trip.isPublic ? 'Private' : 'Public'}
+                        </Button>
                         <Button 
                           size="sm" 
                           variant="outline"

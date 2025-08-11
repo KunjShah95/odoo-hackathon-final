@@ -19,17 +19,11 @@ import {
   Plane
 } from 'lucide-react';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  currency_preference?: string;
-}
+import type { User as AppUser } from '../types';
 
 interface ProfileScreenProps {
-  user: User;
-  onUpdateUser: (user: User) => void;
+  user: AppUser;
+  onUpdateUser: (user: AppUser) => void;
   onLogout: () => void;
 }
 

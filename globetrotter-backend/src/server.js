@@ -19,6 +19,11 @@ import notificationsRoutes from './routes/notifications.js';
 import analyticsRoutes from './routes/analytics.js';
 import searchRoutes from './routes/search.js';
 import shareRoutes from './routes/share.js';
+import integrationsRoutes from './routes/integrations.js';
+import geoRoutes from './routes/geo.js';
+import placesRoutes from './routes/places.js';
+import currencyRoutes from './routes/currency.js';
+import aiRoutes from './routes/ai.js';
 
 const app = express();
 app.use(cors());
@@ -41,6 +46,11 @@ app.use('/notifications', notificationsRoutes);
 app.use('/analytics', analyticsRoutes);
 app.use('/search', searchRoutes);
 app.use('/share', shareRoutes);
+app.use('/integrations', integrationsRoutes);
+app.use('/geo', geoRoutes);
+app.use('/places', placesRoutes);
+app.use('/currency', currencyRoutes);
+app.use('/ai', aiRoutes);
 
 // quick DB test route (optional)
 app.get('/_dbtest', async (req, res) => {

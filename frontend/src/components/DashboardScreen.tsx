@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -22,9 +22,13 @@ import {
   Bell
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { User, Trip } from '../types';
+import { User, Trip, NotificationItem } from '../types';
 import { POPULAR_DESTINATIONS } from '../constants';
 import { getTripStatus, getStatusColor } from '../utils';
+import SmartSuggestions from './SmartSuggestions';
+import BadgesPanel from './BadgesPanel';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import NotificationCenter from './NotificationCenter';
 
 interface DashboardScreenProps {
   user?: User;
@@ -69,9 +73,64 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState<string | null>(null);
+
+  // Derive smart local notifications (client heuristic) for hackathon demo
+  const heuristicNotifs = useMemo<NotificationItem[]>(() => {
+    const now = new Date();
+    const list: NotificationItem[] = [];
+    // Upcoming trips within 7 days
+    (trips || []).forEach(t => {
+      const start = new Date(t.startDate);
+      const diffDays = (start.getTime() - now.getTime()) / 86400000;
+      if (diffDays > 0 && diffDays <= 7) {
+        list.push({
+          id: `upcoming-${t.id}`,
+            type: 'trip',
+            title: 'Upcoming Trip Soon',
+            message: `${t.name} starts in ${Math.ceil(diffDays)} day${Math.ceil(diffDays) === 1 ? '' : 's'}. Time to finalize your packing list!`,
+            createdAt: now.toISOString(),
+            severity: 'info',
+            tripId: t.id,
+        });
+      }
+    });
+    // Suggest sharing if many public trips
+    const publicCount = (trips || []).filter(t => t.isPublic).length;
+    if (publicCount >= 3) {
+      list.push({
+        id: 'share-hint',
+        type: 'suggestion',
+        title: 'Boost Your Visibility',
+        message: 'You have several public trips. Create a Public Trip Board to showcase them!',
+        createdAt: now.toISOString(),
+        severity: 'success'
+      });
+    }
+    if ((trips || []).length === 0) {
+      list.push({
+        id: 'first-trip',
+        type: 'trip',
+        title: 'Start Your First Adventure',
+        message: 'Create your first trip to unlock personalized AI suggestions and badges.',
+        createdAt: now.toISOString(),
+        severity: 'info'
+      });
+    }
+    return list;
+  }, [trips]);
+
+  // Merge server notifications when fetched
+  useEffect(() => {
+    setNotifications(prev => {
+      const existingIds = new Set(prev.map(n => n.id));
+      const merged = [...prev];
+      heuristicNotifs.forEach(h => { if (!existingIds.has(h.id)) merged.push(h); });
+      return merged;
+    });
+  }, [heuristicNotifs]);
 
   const upcomingTrips = (trips || []).filter(trip => new Date(trip.startDate) > new Date()).slice(0, 3);
   const recentTrips = (trips || []).slice(0, 3);
@@ -82,52 +141,54 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
     navigate('/create-trip', { state: { template } });
   };
 
-  const handleShowNotifications = async () => {
-    setShowNotifications(!showNotifications);
-    if (!showNotifications && user) {
-      setNotifLoading(true);
-      setNotifError(null);
-      try {
-        const token = (user as any).token || localStorage.getItem('token');
-        if (!token) throw new Error('No auth token');
-        const data = await import('../utils/api').then(m => m.getNotifications(token));
-        setNotifications(data);
-      } catch (e: any) {
-        setNotifError(e.message || 'Failed to fetch notifications');
-      } finally {
-        setNotifLoading(false);
-      }
+  const fetchServerNotifications = async () => {
+    if (!user) return;
+    setNotifLoading(true);
+    setNotifError(null);
+    try {
+      const token = (user as any).token || localStorage.getItem('token');
+      if (!token) throw new Error('No auth token');
+      const data = await import('../utils/api').then(m => m.getNotifications(token));
+      // Assume backend returns array; map to NotificationItem shape if needed
+      const mapped: NotificationItem[] = (Array.isArray(data) ? data : []).map((d: any, idx: number) => ({
+        id: d.id?.toString() || `srv-${idx}`,
+        type: d.type || 'system',
+        title: d.title || d.heading || 'Notification',
+        message: d.message || d.body || 'Update available',
+        createdAt: d.createdAt || d.created_at || new Date().toISOString(),
+        read: d.read || false,
+        tripId: d.tripId || d.trip_id,
+        severity: d.severity || 'info'
+      }));
+      setNotifications(prev => {
+        const ids = new Set(prev.map(p => p.id));
+        const merged = [...prev];
+        mapped.forEach(m => { if (!ids.has(m.id)) merged.push(m); });
+        return merged;
+      });
+    } catch (e: any) {
+      setNotifError(e.message || 'Failed to fetch notifications');
+    } finally {
+      setNotifLoading(false);
     }
   };
 
-  return (
-    <>
-      {/* Notifications Button */}
-      <div className="fixed top-4 right-4 z-50">
-        <Button variant="outline" onClick={handleShowNotifications} className="relative">
-          <Bell className="w-5 h-5" />
-        </Button>
-        {showNotifications && (
-          <div className="absolute right-0 mt-2 w-80 bg-white border rounded shadow-lg p-4 z-50">
-            <div className="font-semibold mb-2">Notifications</div>
-            {notifLoading ? (
-              <div className="text-xs text-gray-500">Loading...</div>
-            ) : notifError ? (
-              <div className="text-xs text-red-500">{notifError}</div>
-            ) : notifications && notifications.invites && notifications.invites.length > 0 ? (
-              <ul className="space-y-2">
-                {notifications.invites.map((invite: any) => (
-                  <li key={invite.id} className="text-xs text-gray-700 border-b pb-1">
-                    Invited to <b>{invite.trip.name}</b> as <b>{invite.role}</b>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-xs text-gray-500">No notifications</div>
-            )}
-          </div>
-        )}
-      </div>
+  const handleToggleNotifications = async () => {
+    const open = !showNotifications;
+    setShowNotifications(open);
+    if (open) {
+      fetchServerNotifications();
+    }
+  };
+
+  const handleMarkRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+  const handleMarkAll = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+    
+      return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Header */}
       <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
@@ -152,6 +213,27 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     {(user?.name || 'U').split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
+                <Popover open={showNotifications} onOpenChange={handleToggleNotifications}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="relative">
+                      <Bell className="w-4 h-4" />
+                      {notifications.some(n => !n.read) && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[10px] rounded-full text-white flex items-center justify-center">
+                          {notifications.filter(n => !n.read).length}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80">
+                    <NotificationCenter
+                      notifications={notifications.sort((a,b)=> (a.read?1:0)-(b.read?1:0) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())}
+                      onMarkRead={handleMarkRead}
+                      onMarkAll={handleMarkAll}
+                      loading={notifLoading}
+                      error={notifError}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <div className="hidden sm:flex items-center space-x-1">
                   <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
                     <Settings className="w-4 h-4" />
@@ -173,6 +255,8 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <SmartSuggestions />
+        <BadgesPanel />
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-extrabold text-blue-900 mb-2">
@@ -282,6 +366,14 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     >
                       <TrendingUp className="w-4 h-4 mr-2" />
                       Find Activities
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/public-boards')}
+                    >
+                      <Globe className="w-4 h-4 mr-2" />
+                      Public Boards
                     </Button>
                   </CardContent>
                 </Card>
@@ -473,6 +565,5 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
         </Tabs>
       </div>
     </div>
-    </>
   );
 }

@@ -60,3 +60,15 @@ export interface BudgetItem {
   amount: number;
   percentage: number;
 }
+
+// In-app notification model for smart notifications center
+export interface NotificationItem {
+  id: string;
+  type: 'trip' | 'weather' | 'collaboration' | 'system' | 'suggestion';
+  title: string;
+  message: string;
+  createdAt: string; // ISO timestamp
+  read?: boolean;
+  tripId?: string; // optional linking
+  severity?: 'info' | 'warning' | 'success';
+}

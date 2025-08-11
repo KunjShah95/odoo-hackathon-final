@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { getActivitySuggestion, getWeather } from '../utils/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -11,7 +11,13 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { ArrowLeft, Plus, MapPin, Calendar, Edit, GripVertical, Trash2, Clock, DollarSign } from 'lucide-react';
 import { User, Trip } from '../types';
+import { getStops, createStop, deleteStop, reorderStops } from '../utils/api';
 import { formatDate, getTripDuration } from '../utils';
+import CollaboratorsPanel from './CollaboratorsPanel';
+import ExpenseSplitter from './ExpenseSplitter';
+import PackingListGenerator from './PackingListGenerator';
+import MapView from './MapView';
+import RealtimeCollabPanel from './RealtimeCollabPanel';
 
 interface ItineraryBuilderScreenProps {
   user: User;
@@ -224,18 +230,35 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
   const { tripId } = useParams();
   const trip = trips.find(t => t.id === tripId);
 
-  // Initialize cities from trip data
-  const [cities, setCities] = useState<CityStop[]>(() => {
-    if (!trip) return [];
-    return trip.cities.map((cityName, index) => ({
-      id: `city-${index}`,
-      name: cityName,
-      days: 2,
-      startDay: index * 2 + 1,
-      activities: index === 0 ? SAMPLE_ACTIVITIES : [], // Add sample activities to first city
-      notes: ''
-    }));
-  });
+  const [cities, setCities] = useState<CityStop[]>([]);
+  const [loadingStops, setLoadingStops] = useState(false);
+  const [stopsError, setStopsError] = useState<string | null>(null);
+  // Load stops from backend
+  useEffect(() => {
+    const loadStops = async () => {
+      if (!tripId) return;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      setLoadingStops(true); setStopsError(null);
+      try {
+        const stops = await getStops(tripId, token);
+        const mapped: CityStop[] = stops.map((s: any, idx: number) => ({
+          id: String(s.id),
+          name: s.city_name,
+          days: 2,
+          startDay: idx * 2 + 1,
+          activities: idx === 0 ? SAMPLE_ACTIVITIES : [],
+          notes: ''
+        }));
+        setCities(mapped);
+      } catch (e: any) {
+        setStopsError(e.message || 'Failed to load stops');
+      } finally {
+        setLoadingStops(false);
+      }
+    };
+    loadStops();
+  }, [tripId]);
 
   const [newCityName, setNewCityName] = useState('');
   const [showAddCity, setShowAddCity] = useState(false);
@@ -247,46 +270,33 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
   const duration = getTripDuration(trip.startDate, trip.endDate);
 
   const moveCity = useCallback((dragIndex: number, hoverIndex: number) => {
-    setCities(prevCities => {
-      const newCities = [...prevCities];
-      const draggedCity = newCities[dragIndex];
-      newCities.splice(dragIndex, 1);
-      newCities.splice(hoverIndex, 0, draggedCity);
-      
-      // Recalculate start days
-      let currentDay = 1;
-      newCities.forEach(city => {
-        city.startDay = currentDay;
-        currentDay += city.days;
-      });
-      
-      return newCities;
+    setCities(prev => {
+      const arr = [...prev];
+      const item = arr[dragIndex];
+      arr.splice(dragIndex, 1);
+      arr.splice(hoverIndex, 0, item);
+      let d = 1; arr.forEach(c => { c.startDay = d; d += c.days; });
+      const token = localStorage.getItem('token');
+      if (token && tripId) {
+        reorderStops(tripId, arr.map((c, i) => ({ stopId: Number(c.id), order_index: i })), token).catch(console.error);
+      }
+      return arr;
     });
-  }, []);
+  }, [tripId]);
 
   const handleAddCity = () => {
-    if (!newCityName.trim()) return;
-    
-    const lastCity = cities[cities.length - 1];
-    const startDay = lastCity ? lastCity.startDay + lastCity.days : 1;
-    
-    const newCity: CityStop = {
-      id: `city-${Date.now()}`,
-      name: newCityName.trim(),
-      days: 2,
-      startDay,
-      activities: [],
-      notes: ''
-    };
-    
-    setCities(prev => [...prev, newCity]);
-    setNewCityName('');
-    setShowAddCity(false);
-    
-    // Update trip
-    onUpdateTrip(trip.id, {
-      cities: [...cities.map(c => c.name), newCity.name]
-    });
+    if (!newCityName.trim() || !tripId) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    createStop(tripId, { city_name: newCityName.trim() }, token)
+      .then(stop => {
+        setCities(prev => [...prev, { id: String(stop.id), name: stop.city_name, days: 2, startDay: prev.length * 2 + 1, activities: [], notes: '' }]);
+        setNewCityName('');
+        setShowAddCity(false);
+      })
+      .catch(err => {
+        console.error(err); alert('Failed to add city');
+      });
   };
 
   const handleEditCity = (city: CityStop) => {
@@ -295,15 +305,10 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
   };
 
   const handleDeleteCity = (cityId: string) => {
-    if (window.confirm('Are you sure you want to remove this city from your trip?')) {
-      const updatedCities = cities.filter(c => c.id !== cityId);
-      setCities(updatedCities);
-      
-      // Update trip
-      onUpdateTrip(trip.id, {
-        cities: updatedCities.map(c => c.name)
-      });
-    }
+    if (!window.confirm('Are you sure you want to remove this city from your trip?')) return;
+    const token = localStorage.getItem('token');
+    if (token) deleteStop(Number(cityId), token).catch(console.error);
+    setCities(prev => prev.filter(c => c.id !== cityId));
   };
 
   const totalActivitiesCost = cities.reduce((total, city) => 
@@ -332,6 +337,9 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
                 <Button variant="outline" size="sm" onClick={() => navigate(`/trip/${tripId}/view`)}>
                   Preview
                 </Button>
+                <Button variant={trip.isPublic ? 'outline' : 'default'} size="sm" onClick={() => onUpdateTrip(trip.id, { isPublic: !trip.isPublic })}>
+                  {trip.isPublic ? 'Make Private' : 'Make Public'}
+                </Button>
                 <Button size="sm" onClick={() => navigate(`/trip/${tripId}/view`)}>
                   Save & View
                 </Button>
@@ -340,7 +348,12 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <RealtimeCollabPanel user={user} tripId={tripId!} />
+          <CollaboratorsPanel tripId={tripId} />
+          <ExpenseSplitter />
+          <PackingListGenerator />
+          <MapView trip={trip} />
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
             {/* Main Content */}
             <div className="lg:col-span-3">
@@ -395,6 +408,8 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
                 )}
 
                 {/* Cities List */}
+                {loadingStops && <div className="text-sm text-gray-500">Loading stops...</div>}
+                {stopsError && <div className="text-sm text-red-600">{stopsError}</div>}
                 {cities.length > 0 ? (
                   <div className="space-y-8">
                     {cities.map((city, index) => (
