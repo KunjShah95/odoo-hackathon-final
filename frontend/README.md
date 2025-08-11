@@ -1,35 +1,44 @@
-# GlobeTrotter Frontend
+# GlobeTrotter Travel Planning Platform Frontend
 
-Stack: React + Vite + Tailwind CSS + React Router + Axios + react-hot-toast
+This is the frontend for the GlobeTrotter Travel Planning Platform, built with React and Vite.
 
-## Setup
+## Getting Started
 
-1. Copy env and install deps
+1. **Install dependencies:**
+   ```
+   npm install
+   ```
 
-```powershell
-Copy-Item .env.example .env -Force
-npm install
-```
+2. **Run the development server:**
+   ```
+   npm run dev
+   ```
 
-2. Run
+3. **Build for production:**
+   ```
+   npm run build
+   ```
 
-```powershell
-npm run dev
-```
+4. **Preview production build:**
+   ```
+   npm run preview
+   ```
 
-Open the URL printed by Vite (default http://localhost:5173).
+## Project Structure
 
-## Config
-- VITE_API_BASE_URL: Backend base URL (default http://localhost:5000)
+- `src/` - Main source code
+  - `components/` - React components and screens
+  - `styles/` - Global CSS
+  - `constants/` - App constants
+  - `types/` - TypeScript types
+  - `utils/` - Utility functions
+  - `guidelines/` - Project guidelines
 
-## Pages
-- /login, /signup
-- / (Dashboard)
-- /trips/:tripId
-- /trips/:tripId/add-stop
-- /stops/:stopId/add-activity
+## Requirements
 
-## Notes
-- JWT is stored in localStorage and sent via Authorization: Bearer header.
-- Error and success notifications use react-hot-toast.
-- Tailwind is preconfigured via PostCSS.
+- Node.js >= 18
+- npm >= 9
+
+## License
+
+See `Attributions.md` and `Guidelines.md` for details.
