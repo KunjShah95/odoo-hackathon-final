@@ -75,6 +75,10 @@ function App() {
   const deleteTrip = (tripId: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== tripId));
   };
+  
+  const handleUpdateUser = (user: User) => {
+    setCurrentUser(user);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -112,7 +116,7 @@ function App() {
           <Route path="/trip/:tripId/budget" element={<BudgetScreen {...commonProps} />} />
           <Route path="/trip/:tripId/calendar" element={<CalendarScreen {...commonProps} />} />
           <Route path="/trip/:tripId/share" element={<SharedItineraryScreen trips={trips} />} />
-          <Route path="/profile" element={<ProfileScreen user={currentUser!} onUpdateUser={setCurrentUser} onLogout={handleLogout} />} />
+          <Route path="/profile" element={<ProfileScreen user={currentUser!} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>
