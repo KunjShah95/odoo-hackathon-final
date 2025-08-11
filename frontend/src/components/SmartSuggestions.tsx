@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { MapPin, TrendingUp, Plus } from 'lucide-react';
 
+// Legacy direct utils kept as fallback
 import { fetchPopularPlaces, fetchPlaceDetails } from '../utils/opentripmap';
 import { generateCreativeSuggestion } from '../utils/huggingface';
+import { aiSuggest, getNearbyPlaces } from '../utils/api';
 
 const DEFAULT_COORDS = { lat: 51.5074, lon: -0.1278 }; // London
 
@@ -19,13 +21,37 @@ const SmartSuggestions: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch real places
-        const rawPlaces = await fetchPopularPlaces({ ...DEFAULT_COORDS, radius: 20000, limit: 3 });
-        const details = await Promise.all(rawPlaces.map((p: any) => fetchPlaceDetails(p.xid)));
+        const token = localStorage.getItem('token');
+        let details: any[] = [];
+        try {
+          if (token) {
+            const nearby = await getNearbyPlaces({ ...DEFAULT_COORDS, radius: 15000, limit: 3 }, token);
+            const items = nearby.items || [];
+            details = await Promise.all(items.map((p: any) => fetchPlaceDetails(p.xid).catch(()=>p)));
+          }
+        } catch (e) {
+          // Fallback to direct client call if backend proxy or key fails
+          const rawPlaces = await fetchPopularPlaces({ ...DEFAULT_COORDS, radius: 20000, limit: 3 });
+          details = await Promise.all(rawPlaces.map((p: any) => fetchPlaceDetails(p.xid)));
+        }
         setPlaces(details);
-        // Fetch creative suggestion
-        const creativeText = await generateCreativeSuggestion('Suggest a unique travel experience for a young explorer:');
-        setCreative(creativeText);
+        try {
+          if (token) {
+            const ai = await aiSuggest('Suggest a unique, sustainable, budget-friendly travel experience:', token);
+            if (ai?.result) setCreative(ai.result);
+            else throw new Error('Empty AI result');
+          } else {
+            throw new Error('Missing token');
+          }
+        } catch (e) {
+          // Fallback local small model direct call (may fail silently if no key) then static message
+            try {
+              const creativeText = await generateCreativeSuggestion('Suggest a unique travel experience for a young explorer:');
+              if (creativeText) setCreative(creativeText);
+            } catch {
+              setCreative('Explore hidden local food markets and pair them with a sunrise photo walk for an authentic cultural immersion.');
+            }
+        }
       } catch (e: any) {
         setError(e.message || 'Failed to load suggestions');
       } finally {
@@ -44,7 +70,10 @@ const SmartSuggestions: React.FC = () => {
         {loading ? (
           <div className="text-center py-8 text-blue-600">Loading smart suggestions...</div>
         ) : error ? (
-          <div className="text-center py-8 text-red-600">{error}</div>
+          <div className="text-center py-8 text-red-600">
+            {error}
+            <div className="mt-2 text-xs text-gray-500">Using fallback suggestions.</div>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

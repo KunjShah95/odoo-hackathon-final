@@ -226,3 +226,26 @@ export async function reorderStops(tripId: string, ordered: { stopId: number; or
   if (!res.ok) throw new Error('Failed to reorder stops');
   return res.json();
 }
+
+// AI Suggestion via backend proxy
+export async function aiSuggest(prompt: string, token: string) {
+  const res = await fetch(`${API_URL}/ai/suggest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ prompt })
+  });
+  if (!res.ok) throw new Error('Failed to get AI suggestion');
+  return res.json();
+}
+
+// Nearby places via backend proxy
+export async function getNearbyPlaces(params: { lat: number; lon: number; radius?: number; limit?: number }, token: string) {
+  const qp = new URLSearchParams({ lat: String(params.lat), lon: String(params.lon) });
+  if (params.radius) qp.set('radius', String(params.radius));
+  if (params.limit) qp.set('limit', String(params.limit));
+  const res = await fetch(`${API_URL}/places/nearby?${qp.toString()}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch nearby places');
+  return res.json();
+}

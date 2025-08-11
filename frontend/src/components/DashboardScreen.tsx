@@ -255,15 +255,16 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <SmartSuggestions />
-        <BadgesPanel />
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-extrabold text-blue-900 mb-2">
-            Welcome back, {(user?.name || 'User').split(' ')[0]}! ✈️
+        {/* Welcome Section FIRST */}
+        <div className="mb-10">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-blue-900 tracking-tight mb-2">
+            Welcome back, {(user?.name || 'User').split(' ')[0]}!
+            <span className="ml-2">✈️</span>
           </h2>
           <p className="text-gray-600 text-lg">Ready to plan your next adventure?</p>
         </div>
+        <SmartSuggestions />
+        <BadgesPanel />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
