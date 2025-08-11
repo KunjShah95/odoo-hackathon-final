@@ -18,12 +18,8 @@ import {
   Bell,
   Plane
 } from 'lucide-react';
-<<<<<<< HEAD
 
 import type { User as AppUser } from '../types';
-=======
-import { User } from '../types';
->>>>>>> 7d06813a9f5e6140688b5d6887bdfe4504421203
 
 interface ProfileScreenProps {
   user: AppUser;
