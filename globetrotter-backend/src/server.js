@@ -10,6 +10,13 @@ import tripsRoutes from './routes/trips.js';
 import stopsRoutes from './routes/stops.js';
 import activitiesRoutes from './routes/activities.js';
 import budgetsRoutes from './routes/budgets.js';
+import expensesRoutes from './routes/expenses.js';
+import collaboratorsRoutes from './routes/collaborators.js';
+import activitySuggestionsRoutes from './routes/activitySuggestions.js';
+import weatherRoutes from './routes/weather.js';
+import pdfExportRoutes from './routes/pdfExport.js';
+import notificationsRoutes from './routes/notifications.js';
+import analyticsRoutes from './routes/analytics.js';
 import searchRoutes from './routes/search.js';
 import shareRoutes from './routes/share.js';
 
@@ -25,6 +32,13 @@ app.use('/trips', tripsRoutes);
 app.use('/stops', stopsRoutes);
 app.use('/activities', activitiesRoutes);
 app.use('/budgets', budgetsRoutes);
+app.use('/expenses', expensesRoutes);
+app.use('/collaborators', collaboratorsRoutes);
+app.use('/activity-suggestions', activitySuggestionsRoutes);
+app.use('/weather', weatherRoutes);
+app.use('/pdf-export', pdfExportRoutes);
+app.use('/notifications', notificationsRoutes);
+app.use('/analytics', analyticsRoutes);
 app.use('/search', searchRoutes);
 app.use('/share', shareRoutes);
 

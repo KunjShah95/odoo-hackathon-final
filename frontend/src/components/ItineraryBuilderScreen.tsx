@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { getActivitySuggestion, getWeather } from '../utils/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -56,6 +57,31 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
   onEdit: (city: CityStop) => void;
   onDelete: (cityId: string) => void;
 }) => {
+  const [suggestion, setSuggestion] = React.useState<any>(null);
+  const [weather, setWeather] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const [sugg, wthr] = await Promise.all([
+          getActivitySuggestion(city.name, token),
+          getWeather(city.name, token)
+        ]);
+        setSuggestion(sugg);
+        setWeather(wthr);
+      } catch (e: any) {
+        setError(e.message || 'Failed to load info');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [city.name]);
   const [{ isDragging }, drag, preview] = useDrag({
     type: ItemTypes.CITY,
     item: { index },
@@ -112,6 +138,33 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+
+        {/* Activity Suggestion & Weather */}
+        <div className="mb-3">
+          {loading ? (
+            <span className="text-xs text-gray-400">Loading city info...</span>
+          ) : error ? (
+            <span className="text-xs text-red-500">{error}</span>
+          ) : (
+            <>
+              {suggestion && (
+                <div className="mb-2 p-2 bg-blue-50 rounded">
+                  <div className="font-semibold text-blue-800">Suggested: {suggestion.title}</div>
+                  <div className="text-xs text-blue-700 mb-1">{suggestion.description}</div>
+                  {suggestion.image && <img src={suggestion.image} alt="suggestion" className="w-24 h-16 object-cover rounded" />}
+                  {suggestion.wikiUrl && <a href={suggestion.wikiUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline ml-1">Learn more</a>}
+                </div>
+              )}
+              {weather && (
+                <div className="mb-2 p-2 bg-yellow-50 rounded flex items-center space-x-2">
+                  <span className="font-semibold text-yellow-800">Weather:</span>
+                  <span className="text-xs">{weather.temp}°C, {weather.description}</span>
+                  {weather.icon && <img src={`https://openweathermap.org/img/wn/${weather.icon}.png`} alt="weather" className="w-6 h-6" />}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Activities */}

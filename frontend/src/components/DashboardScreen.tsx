@@ -18,7 +18,8 @@ import {
   LogOut,
   Star,
   Clock,
-  Globe
+  Globe,
+  Bell
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { User, Trip } from '../types';
@@ -67,6 +68,10 @@ const TRIP_TEMPLATES = [
 export default function DashboardScreen({ user, trips = [], onLogout }: DashboardScreenProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any>(null);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState<string | null>(null);
 
   const upcomingTrips = (trips || []).filter(trip => new Date(trip.startDate) > new Date()).slice(0, 3);
   const recentTrips = (trips || []).slice(0, 3);
@@ -77,7 +82,52 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
     navigate('/create-trip', { state: { template } });
   };
 
+  const handleShowNotifications = async () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && user) {
+      setNotifLoading(true);
+      setNotifError(null);
+      try {
+        const token = (user as any).token || localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const data = await import('../utils/api').then(m => m.getNotifications(token));
+        setNotifications(data);
+      } catch (e: any) {
+        setNotifError(e.message || 'Failed to fetch notifications');
+      } finally {
+        setNotifLoading(false);
+      }
+    }
+  };
+
   return (
+    <>
+      {/* Notifications Button */}
+      <div className="fixed top-4 right-4 z-50">
+        <Button variant="outline" onClick={handleShowNotifications} className="relative">
+          <Bell className="w-5 h-5" />
+        </Button>
+        {showNotifications && (
+          <div className="absolute right-0 mt-2 w-80 bg-white border rounded shadow-lg p-4 z-50">
+            <div className="font-semibold mb-2">Notifications</div>
+            {notifLoading ? (
+              <div className="text-xs text-gray-500">Loading...</div>
+            ) : notifError ? (
+              <div className="text-xs text-red-500">{notifError}</div>
+            ) : notifications && notifications.invites && notifications.invites.length > 0 ? (
+              <ul className="space-y-2">
+                {notifications.invites.map((invite: any) => (
+                  <li key={invite.id} className="text-xs text-gray-700 border-b pb-1">
+                    Invited to <b>{invite.trip.name}</b> as <b>{invite.role}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-xs text-gray-500">No notifications</div>
+            )}
+          </div>
+        )}
+      </div>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-border sticky top-0 z-40">
@@ -428,5 +478,6 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
         </Tabs>
       </div>
     </div>
+    </>
   );
 }

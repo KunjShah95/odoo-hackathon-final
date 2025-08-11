@@ -1,3 +1,29 @@
+model TripCollaborator {
+        id        Int      @id @default(autoincrement())
+        trip      Trip     @relation(fields: [trip_id], references: [id])
+        trip_id   Int
+        user      User     @relation(fields: [user_id], references: [id])
+        user_id   Int
+        role      String   @default("editor") // editor, viewer, etc.
+        invited_by Int?
+        created_at DateTime @default(now())
+        @@unique([trip_id, user_id])
+        @@map("trip_collaborators")
+}
+model Expense {
+        id          Int      @id @default(autoincrement())
+        trip        Trip     @relation(fields: [trip_id], references: [id])
+        trip_id     Int
+        user        User     @relation(fields: [user_id], references: [id])
+        user_id     Int
+        category    String
+        amount      Float
+        currency    String   @default("USD")
+        description String?
+        date        DateTime @default(now())
+        created_at  DateTime @default(now())
+        @@map("expenses")
+}
         generator client {
         provider = "prisma-client-js"
         }
@@ -7,23 +33,26 @@
         url      = env("DATABASE_URL")
         }
 
-        model User {
-        id             Int       @id @default(autoincrement())
-        first_name     String
-        last_name      String
-        email          String    @unique
-        password_hash String
-        phone          String?
-        city           String?
-        country        String?
-        photo_url      String?
-        additional_info String?
-        trips          Trip[]
-        community_posts CommunityPost[]
-        created_at     DateTime  @default(now())
+model User {
+        id               Int       @id @default(autoincrement())
+        first_name       String
+        last_name        String
+        email            String    @unique
+        password_hash    String
+        phone            String?
+        city             String?
+        country          String?
+        photo_url        String?
+        additional_info  String?
+        currency_preference String? @default("USD")
+        trips            Trip[]
+        collaborations   TripCollaborator[]
+        expenses         Expense[]
+        community_posts  CommunityPost[]
+        created_at       DateTime  @default(now())
         @@map("users")
-        }
-        model Trip {
+}
+model Trip {
         id          Int       @id @default(autoincrement())
         name        String
         description String?
@@ -37,9 +66,11 @@
         community_posts CommunityPost[]
         budgets       Budget[]
         shared_trips  SharedTrip[]
+        expenses      Expense[]
         created_at    DateTime  @default(now())
+        collaborators TripCollaborator[]
         @@map("trips")
-        }
+}
 
 
 

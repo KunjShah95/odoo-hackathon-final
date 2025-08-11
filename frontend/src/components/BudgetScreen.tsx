@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, DollarSign, PieChart, TrendingUp } from 'lucide-react';
+import { getTripBudget } from '../utils/api';
 
 interface User {
   id: string;
@@ -25,18 +26,46 @@ interface Trip {
 export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[] }) {
   const navigate = useNavigate();
   const { tripId } = useParams();
-  const trip = trips.find(t => t.id === tripId);
+  const trip = trips.find((t: Trip) => t.id === tripId);
+  const [budget, setBudget] = useState<any>(null);
+  const [loadingBudget, setLoadingBudget] = useState(false);
+  const [budgetError, setBudgetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBudget = async () => {
+      if (!tripId || !user) return;
+      setLoadingBudget(true);
+      setBudgetError(null);
+      try {
+        const token = (user as any).token || localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const data = await getTripBudget(tripId as string, token);
+        setBudget(data);
+      } catch (e: any) {
+        setBudgetError(e.message || 'Failed to fetch budget');
+      } finally {
+        setLoadingBudget(false);
+      }
+    };
+    fetchBudget();
+  }, [tripId, user]);
 
   if (!trip) {
     return <div>Trip not found</div>;
   }
 
+  // Example breakdown, replace with real data if available
   const budgetBreakdown = [
     { category: 'Accommodation', amount: 800, percentage: 40 },
     { category: 'Transportation', amount: 600, percentage: 30 },
     { category: 'Food & Dining', amount: 400, percentage: 20 },
     { category: 'Activities', amount: 200, percentage: 10 }
   ];
+
+  // Helper to get symbol
+  const currencySymbols: Record<string, string> = { USD: '$', EUR: '€', INR: '₹' };
+  const userCurrency = (user as any).currency_preference || 'USD';
+  const avgPerDay = budget && budget.average_per_day_currencies ? budget.average_per_day_currencies[userCurrency] : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,8 +106,19 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
                     <p className="text-sm text-gray-600">Remaining</p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <p className="text-2xl font-bold text-purple-600">$180</p>
-                    <p className="text-sm text-gray-600">Per Day</p>
+                    <p className="text-2xl font-bold text-purple-600">Avg/Day</p>
+                    {loadingBudget ? (
+                      <p className="font-semibold">Loading...</p>
+                    ) : budgetError ? (
+                      <p className="text-red-500 text-xs">{budgetError}</p>
+                    ) : avgPerDay !== null ? (
+                      <div className="font-semibold flex flex-col items-center">
+                        <span>{currencySymbols[userCurrency] || userCurrency}: {avgPerDay}</span>
+                      </div>
+                    ) : (
+                      <p className="font-semibold">N/A</p>
+                    )}
+                    <p className="text-sm text-gray-600">Avg/Day ({userCurrency})</p>
                   </div>
                 </div>
               </CardContent>

@@ -1,5 +1,80 @@
-/// <reference types="vite/client" />
-const API_URL = import.meta.env.VITE_API_URL;
+// Activity Suggestions
+export async function getActivitySuggestion(city: string, token: string) {
+  const res = await fetch(`${API_URL}/activity-suggestions/${encodeURIComponent(city)}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch activity suggestion');
+  return res.json();
+}
+
+// Weather
+export async function getWeather(city: string, token: string) {
+  const res = await fetch(`${API_URL}/weather?city=${encodeURIComponent(city)}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch weather');
+  return res.json();
+}
+
+// PDF Export
+export function getTripPDFUrl(tripId: string) {
+  const token = localStorage.getItem('token');
+  return `${API_URL}/pdf-export/${tripId}?token=${token}`;
+}
+
+// Notifications
+export async function getNotifications(token: string) {
+  const res = await fetch(`${API_URL}/notifications`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch notifications');
+  return res.json();
+}
+
+// Analytics
+export async function getTripAnalytics(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/analytics/trip/${tripId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch analytics');
+  return res.json();
+}
+// Collaborators API
+export async function getCollaborators(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/collaborators/${tripId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch collaborators');
+  return res.json();
+}
+
+export async function inviteCollaborator(tripId: string, email: string, role: string, token: string) {
+  const res = await fetch(`${API_URL}/collaborators/${tripId}/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ email, role })
+  });
+  if (!res.ok) throw new Error('Failed to invite collaborator');
+  return res.json();
+}
+
+export async function removeCollaborator(tripId: string, userId: string, token: string) {
+  const res = await fetch(`${API_URL}/collaborators/${tripId}/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to remove collaborator');
+  return res.json();
+}
+
+// Vite env type fix
+interface ImportMetaEnv {
+  readonly VITE_API_URL: string;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+const API_URL: string = ((import.meta as unknown) as ImportMeta).env.VITE_API_URL;
 
 export async function login(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
@@ -43,4 +118,11 @@ export async function getTrips(token: string) {
   return res.json();
 }
 
-// Add more API helpers as needed (createTrip, etc.)
+
+export async function getTripBudget(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/budgets/${tripId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch budget');
+  return res.json();
+}

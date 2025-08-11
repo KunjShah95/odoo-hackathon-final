@@ -1,8 +1,21 @@
+export interface Collaborator {
+  id: number;
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  role: string;
+  invited_by?: number;
+  created_at: string;
+}
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
+  currency_preference?: 'USD' | 'EUR' | 'INR';
 }
 
 export interface Trip {

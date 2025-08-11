@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, MapPin, Calendar, Share2, Edit, DollarSign } from 'lucide-react';
+import { getTripBudget, getCollaborators, inviteCollaborator, removeCollaborator, getTripPDFUrl, getTripAnalytics } from '../utils/api';
+import type { Collaborator } from '../types';
 
 interface User {
   id: string;
@@ -27,12 +29,104 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
   const navigate = useNavigate();
   const { tripId } = useParams();
   const trip = trips.find(t => t.id === tripId);
+  const [budget, setBudget] = useState<any>(null);
+  const [loadingBudget, setLoadingBudget] = useState(false);
+  const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [collabEmail, setCollabEmail] = useState('');
+  const [collabError, setCollabError] = useState<string | null>(null);
+  const [collabLoading, setCollabLoading] = useState(false);
+
+  // Fetch budget
+  useEffect(() => {
+    const fetchBudget = async () => {
+      if (!tripId || !user) return;
+      setLoadingBudget(true);
+      setBudgetError(null);
+      try {
+        // Assume user has a token property; adjust as needed
+        const token = (user as any).token || localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const data = await getTripBudget(tripId, token);
+        setBudget(data);
+      } catch (e: any) {
+        setBudgetError(e.message || 'Failed to fetch budget');
+      } finally {
+        setLoadingBudget(false);
+      }
+    };
+    fetchBudget();
+  }, [tripId, user]);
+
+  // Fetch analytics
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!tripId || !user) return;
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+      try {
+        const token = (user as any).token || localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const data = await getTripAnalytics(tripId, token);
+        setAnalytics(data);
+      } catch (e: any) {
+        setAnalyticsError(e.message || 'Failed to fetch analytics');
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, [tripId, user]);
+
+  // Fetch collaborators
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (!tripId || !user) return;
+      setCollabError(null);
+      try {
+        const token = (user as any).token || localStorage.getItem('token');
+        if (!token) throw new Error('No auth token');
+        const data = await getCollaborators(tripId, token);
+        setCollaborators(data);
+      } catch (e: any) {
+        setCollabError(e.message || 'Failed to fetch collaborators');
+      }
+    };
+    fetchCollaborators();
+  }, [tripId, user]);
+
+  const handleInvite = async () => {
+    if (!collabEmail) return;
+    setCollabLoading(true);
+    setCollabError(null);
+    try {
+      const token = (user as any).token || localStorage.getItem('token');
+      if (!token) throw new Error('No auth token');
+      await inviteCollaborator(tripId!, collabEmail, 'editor', token);
+      setCollabEmail('');
+      // Refresh list
+      const data = await getCollaborators(tripId!, token);
+      setCollaborators(data);
+    } catch (e: any) {
+      setCollabError(e.message || 'Failed to invite');
+    } finally {
+      setCollabLoading(false);
+    }
+  };
 
   if (!trip) {
     return <div>Trip not found</div>;
   }
 
   const duration = Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24));
+
+  // Helper to get symbol
+  const currencySymbols: Record<string, string> = { USD: '$', EUR: '€', INR: '₹' };
+  const userCurrency = (user as any).currency_preference || 'USD';
+  const avgPerDay = budget && budget.average_per_day_currencies ? budget.average_per_day_currencies[userCurrency] : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,8 +188,18 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
                   </div>
                   <div className="text-center p-3 bg-orange-50 rounded-lg">
                     <Calendar className="w-6 h-6 text-orange-600 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Cost/Day</p>
-                    <p className="font-semibold">${Math.round(trip.totalCost / duration)}</p>
+                    <p className="text-sm text-gray-600">Avg Cost/Day</p>
+                    {loadingBudget ? (
+                      <p className="font-semibold">Loading...</p>
+                    ) : budgetError ? (
+                      <p className="text-red-500 text-xs">{budgetError}</p>
+                    ) : avgPerDay !== null ? (
+                      <div className="font-semibold flex flex-col items-center">
+                        <span>{currencySymbols[userCurrency] || userCurrency}: {avgPerDay}</span>
+                      </div>
+                    ) : (
+                      <p className="font-semibold">N/A</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -159,6 +263,30 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/trip/${tripId}/build`)}>
+                <a href={getTripPDFUrl(tripId!)} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full justify-start mt-2">
+                    <span role="img" aria-label="PDF">📄</span> Export as PDF
+                  </Button>
+                </a>
+                <Button variant="outline" className="w-full justify-start mt-2" onClick={() => setAnalyticsLoading(!analyticsLoading)}>
+                  <span role="img" aria-label="Analytics">📊</span> View Analytics
+                </Button>
+                {analyticsLoading && (
+                  <div className="p-2 bg-gray-50 rounded mt-2">
+                    {analyticsError ? (
+                      <span className="text-red-500 text-xs">{analyticsError}</span>
+                    ) : analytics ? (
+                      <ul className="text-xs text-gray-700 space-y-1">
+                        <li>Total Expenses: <b>{analytics.totalExpenses}</b></li>
+                        <li>Stops: <b>{analytics.stopCount}</b></li>
+                        <li>Activities: <b>{analytics.activityCount}</b></li>
+                        <li>Collaborators: <b>{analytics.collaboratorCount}</b></li>
+                      </ul>
+                    ) : (
+                      <span className="text-xs text-gray-400">Loading analytics...</span>
+                    )}
+                  </div>
+                )}
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Itinerary
                 </Button>

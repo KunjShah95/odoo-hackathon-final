@@ -24,6 +24,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
+  currency_preference?: string;
 }
 
 interface ProfileScreenProps {
@@ -38,7 +39,8 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    avatar: user.avatar || ''
+    avatar: user.avatar || '',
+    currency_preference: (user as any).currency_preference || 'USD',
   });
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -52,7 +54,8 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
       ...user,
       name: formData.name,
       email: formData.email,
-      avatar: formData.avatar
+      avatar: formData.avatar,
+      currency_preference: formData.currency_preference,
     });
     setIsEditing(false);
   };
@@ -158,6 +161,22 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     disabled={!isEditing}
                   />
+                </div>
+
+                {/* Currency Preference */}
+                <div className="space-y-2">
+                  <Label htmlFor="currency_preference">Preferred Currency</Label>
+                  <select
+                    id="currency_preference"
+                    value={formData.currency_preference}
+                    onChange={e => setFormData(prev => ({ ...prev, currency_preference: e.target.value }))}
+                    disabled={!isEditing}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="INR">INR - Indian Rupee</option>
+                  </select>
                 </div>
 
                 {/* Action Buttons */}
