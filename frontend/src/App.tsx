@@ -91,6 +91,10 @@ function App() {
   const deleteTrip = (tripId: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== tripId));
   };
+  
+  const handleUpdateUser = (user: User) => {
+    setCurrentUser(user);
+  };
 
   const cloneTrip = (trip: Trip) => {
     setTrips(prev => [...prev, trip]);
@@ -132,9 +136,13 @@ function App() {
           <Route path="/trip/:tripId/budget" element={<BudgetScreen {...commonProps} />} />
           <Route path="/trip/:tripId/calendar" element={<CalendarScreen {...commonProps} />} />
           <Route path="/trip/:tripId/share" element={<SharedItineraryScreen trips={trips} />} />
+<<<<<<< HEAD
           <Route path="/public-boards" element={<PublicTripBoards user={currentUser!} trips={trips} onCloneTrip={cloneTrip} />} />
           <Route path="/profile" element={<ProfileScreen user={currentUser!} onUpdateUser={setCurrentUser} onLogout={handleLogout} />} />
           <Route path="/admin/*" element={<AdminPanel />} />
+=======
+          <Route path="/profile" element={<ProfileScreen user={currentUser!} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />} />
+>>>>>>> 7d06813a9f5e6140688b5d6887bdfe4504421203
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

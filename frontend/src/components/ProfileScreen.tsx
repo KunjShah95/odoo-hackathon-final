@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Switch } from './ui/switch';
 import { 
   ArrowLeft, 
-  User, 
+  User as UserIcon, 
   Mail, 
   Camera, 
   Save, 
@@ -18,8 +18,12 @@ import {
   Bell,
   Plane
 } from 'lucide-react';
+<<<<<<< HEAD
 
 import type { User as AppUser } from '../types';
+=======
+import { User } from '../types';
+>>>>>>> 7d06813a9f5e6140688b5d6887bdfe4504421203
 
 interface ProfileScreenProps {
   user: AppUser;
@@ -30,11 +34,16 @@ interface ProfileScreenProps {
 export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileScreenProps) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    avatar: string;
+    currency_preference: 'USD' | 'EUR' | 'INR';
+  }>({
     name: user.name,
     email: user.email,
     avatar: user.avatar || '',
-    currency_preference: (user as any).currency_preference || 'USD',
+    currency_preference: user.currency_preference || 'USD',
   });
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -79,7 +88,7 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
             
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+                <UserIcon className="w-4 h-4 text-white" />
               </div>
               <h1 className="text-xl font-bold">Profile & Settings</h1>
             </div>
@@ -94,7 +103,7 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2" />
+                  <UserIcon className="w-5 h-5 mr-2" />
                   Profile Information
                 </CardTitle>
                 <CardDescription>
@@ -163,7 +172,7 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
                   <select
                     id="currency_preference"
                     value={formData.currency_preference}
-                    onChange={e => setFormData(prev => ({ ...prev, currency_preference: e.target.value }))}
+                    onChange={e => setFormData(prev => ({ ...prev, currency_preference: e.target.value as 'USD' | 'EUR' | 'INR' }))}
                     disabled={!isEditing}
                     className="border rounded px-2 py-1"
                   >
