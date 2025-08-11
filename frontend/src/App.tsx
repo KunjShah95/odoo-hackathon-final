@@ -29,9 +29,9 @@ function App() {
   const handleLogin = (email: string, password: string) => {
     setCurrentUser({
       id: '1',
-      name: 'Alex Johnson',
+      name: 'Varad Vekariya',
       email: email,
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+      avatar: 'https://media.licdn.com/dms/image/v2/D4E03AQE4iAklqcnVEA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1725693994480?e=1757548800&v=beta&t=_7JtktwgnzaZBX5-oZBnuS000YjdfbXDvPQ8Ds8oUjY'
     });
     setIsAuthenticated(true);
   };
