@@ -97,9 +97,9 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -112,15 +112,13 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-              
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <Plane className="w-4 h-4 text-white" />
                 </div>
-                <h1 className="text-xl font-bold">My Trips</h1>
+                <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">My Trips</h1>
               </div>
             </div>
-            
             <Button 
               onClick={() => navigate('/create-trip')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -130,11 +128,11 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
             </Button>
           </div>
         </div>
-      </header>
+    </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
+        <div className="mb-10 space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -145,7 +143,6 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                 className="pl-10"
               />
             </div>
-            
             <div className="flex gap-2">
               <Button
                 variant={filterStatus === 'all' ? 'default' : 'outline'}
@@ -170,9 +167,8 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
               </Button>
             </div>
           </div>
-          
           <div className="flex items-center justify-between">
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-lg">
               {filteredTrips.length} {filteredTrips.length === 1 ? 'trip' : 'trips'} found
             </p>
           </div>
@@ -184,9 +180,9 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
             {filteredTrips.map(trip => {
               const status = getTripStatus(trip);
               return (
-                <Card key={trip.id} className="group hover:shadow-lg transition-shadow duration-300">
+                <Card key={trip.id} className="group hover:shadow-xl transition-shadow duration-300 border-0 shadow-md">
                   <div className="relative">
-                    <div className="h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-t-lg overflow-hidden">
+                    <div className="h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-t-xl overflow-hidden">
                       {trip.coverPhoto ? (
                         <ImageWithFallback
                           src={trip.coverPhoto}
@@ -199,13 +195,11 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                         </div>
                       )}
                     </div>
-                    
                     <div className="absolute top-3 right-3">
                       <Badge className={getStatusColor(status)}>
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Badge>
                     </div>
-                    
                     {trip.isPublic && (
                       <div className="absolute top-3 left-3">
                         <Badge variant="secondary" className="bg-white/90">
@@ -215,21 +209,18 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                       </div>
                     )}
                   </div>
-                  
-                  <CardContent className="p-6">
+                  <CardContent className="p-8">
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold text-lg mb-1">{trip.name}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-2">{trip.description}</p>
+                        <h3 className="font-semibold text-xl mb-1 text-blue-900">{trip.name}</h3>
+                        <p className="text-gray-600 text-base line-clamp-2">{trip.description}</p>
                       </div>
-                      
                       <div className="space-y-2">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-base text-gray-500">
                           <Calendar className="w-4 h-4 mr-2" />
                           {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
                         </div>
-                        
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-base text-gray-500">
                           <MapPin className="w-4 h-4 mr-2" />
                           {trip.cities.length > 0 ? (
                             `${trip.cities.length} ${trip.cities.length === 1 ? 'city' : 'cities'}`
@@ -237,13 +228,11 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                             'No cities added yet'
                           )}
                         </div>
-                        
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-base text-gray-500">
                           <DollarSign className="w-4 h-4 mr-2" />
                           ${trip.totalCost.toLocaleString()} budget
                         </div>
                       </div>
-                      
                       <div className="flex items-center space-x-2 pt-2">
                         <Button 
                           size="sm" 
@@ -254,16 +243,14 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Button>
-                        
                         <Button 
-                          size="sm"
+                          size="sm" 
                           onClick={() => navigate(`/trip/${trip.id}/build`)}
                           className="flex-1"
                         >
                           <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
-                        
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -280,22 +267,19 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
+          <div className="text-center py-24">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <MapPin className="w-12 h-12 text-gray-400" />
             </div>
-            
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-2xl font-semibold text-blue-900 mb-2">
               {searchQuery || filterStatus !== 'all' ? 'No trips found' : 'No trips yet'}
             </h3>
-            
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-gray-600 mb-6 max-w-md mx-auto text-lg">
               {searchQuery || filterStatus !== 'all' 
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Start planning your first adventure! Create a trip and begin exploring the world.'
               }
             </p>
-            
             {!searchQuery && filterStatus === 'all' && (
               <Button 
                 onClick={() => navigate('/create-trip')}
@@ -305,7 +289,6 @@ export default function MyTripsScreen({ user, trips, onUpdateTrip, onDeleteTrip 
                 Create Your First Trip
               </Button>
             )}
-            
             {(searchQuery || filterStatus !== 'all') && (
               <Button 
                 variant="outline"
