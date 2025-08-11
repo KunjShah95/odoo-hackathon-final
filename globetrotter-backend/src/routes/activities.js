@@ -33,4 +33,17 @@ router.post('/:stopId',auth,async(req,res) => {
     }
 });
 
+// Get activities by stop
+router.get('/by-stop/:stopId', auth, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM activities WHERE stop_id = $1 ORDER BY id ASC`,
+            [req.params.stopId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 module.exports = router;
