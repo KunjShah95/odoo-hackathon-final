@@ -9,72 +9,106 @@
 
         model User {
         id             Int       @id @default(autoincrement())
-        firstName      String
-        lastName       String
+        first_name     String
+        last_name      String
         email          String    @unique
-        password       String
+        password_hash String
         phone          String?
         city           String?
         country        String?
-        photoUrl       String?
-        additionalInfo String?
+        photo_url      String?
+        additional_info String?
         trips          Trip[]
-        communityPosts CommunityPost[]
-        createdAt      DateTime  @default(now())
+        community_posts CommunityPost[]
+        created_at     DateTime  @default(now())
+        @@map("users")
         }
         model Trip {
         id          Int       @id @default(autoincrement())
         name        String
         description String?
-        startDate   DateTime
-        endDate     DateTime
-        isPublic    Boolean   @default(false)
-        user        User      @relation(fields: [userId], references: [id])
-        userId      Int
-        stops       Stop[]
-        communityPosts CommunityPost[]
-        createdAt   DateTime  @default(now())
+        start_date  DateTime
+        end_date    DateTime
+        cover_photo String?
+        is_public   Boolean   @default(false)
+        user        User      @relation(fields: [user_id], references: [id])
+        user_id     Int
+        stops         Stop[]
+        community_posts CommunityPost[]
+        budgets       Budget[]
+        shared_trips  SharedTrip[]
+        created_at    DateTime  @default(now())
+        @@map("trips")
         }
 
 
-        model Stop {
-        id        Int       @id @default(autoincrement())
-        cityName  String
-        country   String
-        startDate DateTime
-        endDate   DateTime
-        trip      Trip      @relation(fields: [tripId], references: [id])
-        tripId    Int
-        activities Activity[]
-        }
 
-        model Activity {
-        id          Int      @id @default(autoincrement())
-        name        String
-        description String?
-        type        String?
-        cost        Float?
-        duration    Int?
-        imageUrl    String?
-        stop        Stop     @relation(fields: [stopId], references: [id])
-        stopId      Int
-        }
+model Stop {
+        id           Int      @id @default(autoincrement())
+        city_name    String
+        country_name String
+        start_date   DateTime
+        end_date     DateTime
+        order_index  Int?
+        trip         Trip     @relation(fields: [trip_id], references: [id])
+        trip_id      Int
+        activities   Activity[]
+        @@map("stops")
+}
+
+model Activity {
+        id               Int      @id @default(autoincrement())
+        name             String
+        description      String?
+        type             String?
+        cost             Float?
+        duration_minutes Int?
+        image_url        String?
+        stop             Stop     @relation(fields: [stop_id], references: [id])
+        stop_id          Int
+        @@map("activities")
+}
 
         model CommunityPost {
         id        Int      @id @default(autoincrement())
         content   String
-        createdAt DateTime @default(now())
-        user      User     @relation(fields: [userId], references: [id])
-        userId    Int
-        trip      Trip?    @relation(fields: [tripId], references: [id])
-        tripId    Int?
+        created_at DateTime @default(now())
+        user      User     @relation(fields: [user_id], references: [id])
+        user_id   Int
+        trip      Trip?    @relation(fields: [trip_id], references: [id])
+        trip_id   Int?
+        @@map("community_posts")
         }
 
-        model Admin {
+
+
+model Budget {
+        id            Int     @id @default(autoincrement())
+        trip_id       Int
+        transport_cost Float
+        stay_cost      Float
+        activity_cost  Float
+        meal_cost      Float
+        total_cost     Float
+        trip           Trip    @relation(fields: [trip_id], references: [id])
+        @@map("budgets")
+}
+
+model SharedTrip {
+        id         Int    @id @default(autoincrement())
+        trip_id    Int   @unique
+        public_key String @unique
+        created_at DateTime @default(now())
+        trip       Trip   @relation(fields: [trip_id], references: [id])
+        @@map("shared_trips")
+}
+
+model Admin {
         id       Int    @id @default(autoincrement())
         name     String
         email    String @unique
         password String
-        }
+        @@map("admins")
+}
 
         

@@ -1,6 +1,6 @@
 // routes/search.js
 import express from 'express';
-import pool from '../db.js';
+import pool from '../../db.js';
 const router = express.Router();
 
 // Search cities (mocked by stops + fallback)

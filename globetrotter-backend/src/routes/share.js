@@ -1,7 +1,7 @@
 // routes/share.js
 import express from 'express';
 import crypto from 'crypto';
-import pool from '../db.js';
+import pool from '../../db.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 const router = express.Router();
 

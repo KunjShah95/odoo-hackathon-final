@@ -2,7 +2,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../db.js';
+import pool from '../../db.js';
 import dotenv from 'dotenv';
 import { verifyToken } from '../middleware/authMiddleware.js';
 dotenv.config();

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { login as apiLogin, signup as apiSignup, getTrips } from './utils/api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { User, Trip } from './types';
 import LoginScreen from './components/LoginScreen';
@@ -15,52 +16,67 @@ import CalendarScreen from './components/CalendarScreen';
 import SharedItineraryScreen from './components/SharedItineraryScreen';
 import ProfileScreen from './components/ProfileScreen';
 
-const INITIAL_TRIPS: Trip[] = [
-  {
-    id: '1',
-    name: 'European Adventure',
-    description: 'A magical journey through historic European cities',
-    startDate: '2024-06-15',
-    endDate: '2024-06-30',
-    cities: ['Paris', 'Rome', 'Barcelona'],
-    totalCost: 2500,
-    isPublic: true
-  },
-  {
-    id: '2',
-    name: 'Asian Discovery',
-    description: 'Exploring the vibrant cultures of Asia',
-    startDate: '2024-09-10',
-    endDate: '2024-09-25',
-    cities: ['Tokyo', 'Bangkok', 'Singapore'],
-    totalCost: 3200,
-    isPublic: false
-  }
-];
+
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [trips, setTrips] = useState<Trip[]>(INITIAL_TRIPS);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [token, setToken] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (email: string, password: string) => {
-    setCurrentUser({
-      id: '1',
-      name: 'Alex Johnson',
-      email: email,
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-    });
-    setIsAuthenticated(true);
+  const handleLogin = async (email: string, password: string) => {
+    setAuthError(null);
+    setLoading(true);
+    try {
+      const res = await apiLogin(email, password);
+      setToken(res.token);
+      // Combine first_name and last_name for frontend User type
+      const user = {
+        ...res.user,
+        name: [res.user.first_name, res.user.last_name].filter(Boolean).join(' ')
+      };
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      // Fetch trips after login
+      const tripsRes = await getTrips(res.token);
+      setTrips(tripsRes.trips || []);
+    } catch (err: any) {
+      setAuthError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSignup = (name: string, email: string, password: string) => {
-    setCurrentUser({ id: '1', name: name, email: email });
-    setIsAuthenticated(true);
+  const handleSignup = async (name: string, email: string, password: string) => {
+    setAuthError(null);
+    setLoading(true);
+    try {
+      const res = await apiSignup({ name, email, password });
+      setToken(res.token);
+      // Combine first_name and last_name for frontend User type
+      const user = {
+        ...res.user,
+        name: [res.user.first_name, res.user.last_name].filter(Boolean).join(' ')
+      };
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      // Fetch trips after signup
+      const tripsRes = await getTrips(res.token);
+      setTrips(tripsRes.trips || []);
+    } catch (err: any) {
+      setAuthError(err.message || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setToken(null);
+    setTrips([]);
   };
 
   const addTrip = (trip: Trip) => setTrips(prev => [...prev, trip]);
@@ -77,6 +93,12 @@ function App() {
     return (
       <Router>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+          {loading && (
+            <div className="fixed top-0 left-0 w-full bg-blue-100 text-blue-800 text-center py-2 z-50">Loading...</div>
+          )}
+          {authError && (
+            <div className="text-center text-red-600 py-2">{authError}</div>
+          )}
           <Routes>
             <Route path="/login" element={<LoginScreen onLogin={handleLogin} />} />
             <Route path="/signup" element={<SignupScreen onSignup={handleSignup} />} />

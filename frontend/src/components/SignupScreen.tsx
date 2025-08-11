@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Plane, MapPin, Compass, User } from 'lucide-react';
 
+
 interface SignupScreenProps {
   onSignup: (name: string, email: string, password: string) => void;
 }
@@ -15,7 +16,7 @@ export default function SignupScreen({ onSignup }: SignupScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  // Loading state is now handled by parent (App)
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,13 +34,7 @@ export default function SignupScreen({ onSignup }: SignupScreenProps) {
       return;
     }
     
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      onSignup(name, email, password);
-      setIsLoading(false);
-    }, 1000);
+  onSignup(name, email, password);
   };
 
   return (
@@ -146,9 +141,8 @@ export default function SignupScreen({ onSignup }: SignupScreenProps) {
             <Button 
               type="submit" 
               className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
-              disabled={isLoading}
             >
-              {isLoading ? 'Creating account...' : 'Create Account'}
+              Create Account
             </Button>
           </form>
           

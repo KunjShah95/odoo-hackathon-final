@@ -1,6 +1,6 @@
 // routes/trips.js
 import express from 'express';
-import pool from '../db.js';
+import pool from '../../db.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
@@ -48,7 +48,8 @@ router.get('/:tripId', verifyToken, async (req, res) => {
       const acts = await pool.query('SELECT * FROM activities WHERE stop_id=$1 ORDER BY id ASC', [s.id]);
       s.activities = acts.rows;
     }
-    return res.json({ trip, stops });
+    // Flatten trip fields to top level, add stops
+    return res.json({ ...trip, stops });
   } catch (err) {
     console.error('GET /trips/:tripId', err);
     res.status(500).json({ error: 'Server error' });
