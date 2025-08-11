@@ -128,25 +128,23 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </div>
         )}
       </div>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-40">
+      <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Plane className="w-4 h-4 text-white" />
               </div>
-              <h1 className="text-xl font-bold">GlobeTrotter</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">GlobeTrotter</h1>
             </div>
-            
             {/* Mobile-optimized header actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               <Button variant="ghost" size="sm" onClick={() => navigate('/search/cities')} className="hidden sm:flex">
                 <Search className="w-4 h-4 mr-2" />
                 Search
               </Button>
-              
               <div className="flex items-center space-x-2">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={user?.avatar} alt={user?.name} />
@@ -174,69 +172,66 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-8">
+          <h2 className="text-3xl font-extrabold text-blue-900 mb-2">
             Welcome back, {(user?.name || 'User').split(' ')[0]}! ✈️
           </h2>
-          <p className="text-gray-600">Ready to plan your next adventure?</p>
+          <p className="text-gray-600 text-lg">Ready to plan your next adventure?</p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <Card>
-            <CardContent className="p-4 sm:p-6 flex items-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
-                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="shadow-md border-0">
+            <CardContent className="p-6 flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                <MapPin className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold">{(trips || []).length}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Total Trips</p>
+                <p className="text-2xl font-bold">{(trips || []).length}</p>
+                <p className="text-sm text-blue-700 font-medium">Total Trips</p>
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-4 sm:p-6 flex items-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
-                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+          <Card className="shadow-md border-0">
+            <CardContent className="p-6 flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                <DollarSign className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold">${totalBudget.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Total Budget</p>
+                <p className="text-2xl font-bold">${totalBudget.toLocaleString()}</p>
+                <p className="text-sm text-green-700 font-medium">Total Budget</p>
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-4 sm:p-6 flex items-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+          <Card className="shadow-md border-0">
+            <CardContent className="p-6 flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                <Calendar className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold">{upcomingTrips.length}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Upcoming</p>
+                <p className="text-2xl font-bold">{upcomingTrips.length}</p>
+                <p className="text-sm text-purple-700 font-medium">Upcoming</p>
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-4 sm:p-6 flex items-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+          <Card className="shadow-md border-0">
+            <CardContent className="p-6 flex items-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
+                <Users className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold">{(trips || []).filter(t => t.isPublic).length}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Shared</p>
+                <p className="text-2xl font-bold">{(trips || []).filter(t => t.isPublic).length}</p>
+                <p className="text-sm text-orange-700 font-medium">Shared</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content with Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-4 rounded-xl bg-blue-50">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="explore">Explore</TabsTrigger>
@@ -244,13 +239,13 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </TabsList>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Quick Actions */}
               <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
+                <Card className="shadow border-0">
+                  <CardHeader className="bg-blue-50 rounded-t-xl">
+                    <CardTitle className="text-blue-900">Quick Actions</CardTitle>
                     <CardDescription>Start planning your next adventure</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">

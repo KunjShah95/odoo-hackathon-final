@@ -118,7 +118,7 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
   };
 
   if (!trip) {
-    return <div>Trip not found</div>;
+  return <div className="flex items-center justify-center min-h-screen text-2xl text-gray-400">Trip not found</div>;
   }
 
   const duration = Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -129,8 +129,8 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
   const avgPerDay = budget && budget.average_per_day_currencies ? budget.average_per_day_currencies[userCurrency] : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+      <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -138,7 +138,7 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-              <h1 className="text-xl font-bold">{trip.name}</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">{trip.name}</h1>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" onClick={() => navigate(`/trip/${tripId}/share`)}>
@@ -154,41 +154,40 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="lg:col-span-2 space-y-8">
             {/* Trip Overview */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
+            <Card className="shadow-md border-0">
+              <CardContent className="p-8">
+                <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold mb-2">{trip.name}</h2>
-                    <p className="text-gray-600 mb-4">{trip.description}</p>
+                    <h2 className="text-2xl font-bold mb-2 text-blue-900">{trip.name}</h2>
+                    <p className="text-gray-600 mb-4 text-lg">{trip.description}</p>
                   </div>
                   {trip.isPublic && (
                     <Badge className="bg-green-100 text-green-800">Public</Badge>
                   )}
                 </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <Calendar className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Duration</p>
-                    <p className="font-semibold">{duration} days</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-blue-100 rounded-xl shadow-sm">
+                    <Calendar className="w-7 h-7 text-blue-600 mx-auto mb-2" />
+                    <p className="text-sm text-blue-700 font-medium">Duration</p>
+                    <p className="text-xl font-bold">{duration} days</p>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <MapPin className="w-6 h-6 text-green-600 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Cities</p>
-                    <p className="font-semibold">{trip.cities.length}</p>
+                  <div className="text-center p-4 bg-green-100 rounded-xl shadow-sm">
+                    <MapPin className="w-7 h-7 text-green-600 mx-auto mb-2" />
+                    <p className="text-sm text-green-700 font-medium">Cities</p>
+                    <p className="text-xl font-bold">{trip.cities.length}</p>
                   </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <DollarSign className="w-6 h-6 text-purple-600 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Budget</p>
-                    <p className="font-semibold">${trip.totalCost}</p>
+                  <div className="text-center p-4 bg-purple-100 rounded-xl shadow-sm">
+                    <DollarSign className="w-7 h-7 text-purple-600 mx-auto mb-2" />
+                    <p className="text-sm text-purple-700 font-medium">Budget</p>
+                    <p className="text-xl font-bold">${trip.totalCost}</p>
                   </div>
-                  <div className="text-center p-3 bg-orange-50 rounded-lg">
-                    <Calendar className="w-6 h-6 text-orange-600 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Avg Cost/Day</p>
+                  <div className="text-center p-4 bg-orange-100 rounded-xl shadow-sm">
+                    <Calendar className="w-7 h-7 text-orange-600 mx-auto mb-2" />
+                    <p className="text-sm text-orange-700 font-medium">Avg Cost/Day</p>
                     {loadingBudget ? (
                       <p className="font-semibold">Loading...</p>
                     ) : budgetError ? (
@@ -206,9 +205,9 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
             </Card>
 
             {/* Itinerary Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Itinerary Timeline</CardTitle>
+            <Card className="shadow border-0">
+              <CardHeader className="bg-gray-50 rounded-t-xl">
+                <CardTitle className="text-blue-900">Itinerary Timeline</CardTitle>
               </CardHeader>
               <CardContent>
                 {trip.cities.length > 0 ? (
@@ -224,7 +223,7 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
                           )}
                         </div>
                         <div className="flex-1 pb-8">
-                          <h3 className="font-semibold text-lg">{city}</h3>
+                          <h3 className="font-semibold text-lg text-blue-900">{city}</h3>
                           <p className="text-gray-600 text-sm mb-3">
                             Day {index + 1} - {index + 2}
                           </p>
@@ -256,13 +255,19 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Trip Actions</CardTitle>
+          <div className="space-y-8">
+            <Card className="shadow border-0">
+              <CardHeader className="bg-blue-50 rounded-t-xl">
+                <CardTitle className="text-blue-900 flex items-center">
+                  <DollarSign className="w-5 h-5 mr-2 text-blue-700" />
+                  Trip Actions
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/trip/${tripId}/build`)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Itinerary
+                </Button>
                 <a href={getTripPDFUrl(tripId!)} target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" className="w-full justify-start mt-2">
                     <span role="img" aria-label="PDF">📄</span> Export as PDF
@@ -287,27 +292,24 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
                     )}
                   </div>
                 )}
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Itinerary
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/trip/${tripId}/budget`)}>
+                <Button variant="outline" className="w-full justify-start mt-2" onClick={() => navigate(`/trip/${tripId}/budget`)}>
                   <DollarSign className="w-4 h-4 mr-2" />
                   View Budget
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/trip/${tripId}/calendar`)}>
+                <Button variant="outline" className="w-full justify-start mt-2" onClick={() => navigate(`/trip/${tripId}/calendar`)}>
                   <Calendar className="w-4 h-4 mr-2" />
                   Calendar View
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/trip/${tripId}/share`)}>
+                <Button variant="outline" className="w-full justify-start mt-2" onClick={() => navigate(`/trip/${tripId}/share`)}>
                   <Share2 className="w-4 h-4 mr-2" />
                   Share Trip
                 </Button>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Trip Details</CardTitle>
+            <Card className="shadow border-0">
+              <CardHeader className="bg-gray-50 rounded-t-xl">
+                <CardTitle className="text-blue-900">Trip Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>

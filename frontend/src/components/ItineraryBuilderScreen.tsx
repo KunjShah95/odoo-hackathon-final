@@ -312,9 +312,9 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
 
   return (
     <DndProvider backend={isMobile ? TouchBackend : HTML5Backend}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
         {/* Header */}
-        <header className="bg-white border-b border-border sticky top-0 z-40">
+        <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
@@ -324,7 +324,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
                   <span className="sm:hidden">Back</span>
                 </Button>
                 <div>
-                  <h1 className="text-lg sm:text-xl font-bold">Build Itinerary</h1>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">Build Itinerary</h1>
                   <p className="text-sm text-gray-600 hidden sm:block">{trip.name}</p>
                 </div>
               </div>
@@ -340,33 +340,33 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
             {/* Main Content */}
             <div className="lg:col-span-3">
               {/* Trip Overview */}
-              <Card className="mb-6">
-                <CardContent className="p-4 sm:p-6">
+              <Card className="shadow-md border-0 mb-8">
+                <CardContent className="p-8">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
                     <div>
-                      <h2 className="text-xl font-bold mb-1">{trip.name}</h2>
-                      <p className="text-gray-600 text-sm">{trip.description}</p>
+                      <h2 className="text-2xl font-bold mb-1 text-blue-900">{trip.name}</h2>
+                      <p className="text-gray-600 text-lg">{trip.description}</p>
                     </div>
-                    <div className="flex items-center space-x-4 text-sm">
+                    <div className="flex items-center space-x-4 text-lg">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-1 text-gray-500" />
+                        <Calendar className="w-5 h-5 mr-1 text-blue-600" />
                         <span>{formatDate(trip.startDate)} - {formatDate(trip.endDate)}</span>
                       </div>
-                      <Badge variant="secondary">{duration} days</Badge>
+                      <Badge className="bg-blue-100 text-blue-800">{duration} days</Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Cities & Itinerary */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                  <h2 className="text-xl font-semibold">Cities & Activities</h2>
+                  <h2 className="text-xl font-semibold text-blue-900">Cities & Activities</h2>
                   <Button onClick={() => setShowAddCity(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add City
@@ -375,8 +375,8 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
 
                 {/* Add City Form */}
                 {showAddCity && (
-                  <Card className="border-dashed border-2 border-gray-300">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="border-dashed border-2 border-blue-200">
+                    <CardContent className="p-6">
                       <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
                         <Input
                           placeholder="Enter city name..."
@@ -396,7 +396,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
 
                 {/* Cities List */}
                 {cities.length > 0 ? (
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {cities.map((city, index) => (
                       <DraggableCity
                         key={city.id}
@@ -425,38 +425,38 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Trip Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trip Summary</CardTitle>
+              <Card className="shadow border-0">
+                <CardHeader className="bg-blue-50 rounded-t-xl">
+                  <CardTitle className="text-blue-900">Trip Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Duration</span>
-                    <Badge variant="secondary">{duration} days</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">{duration} days</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Cities</span>
-                    <Badge variant="secondary">{cities.length}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">{cities.length}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Activities</span>
-                    <Badge variant="secondary">
+                    <Badge className="bg-blue-100 text-blue-800">
                       {cities.reduce((total, city) => total + city.activities.length, 0)}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Activities Cost</span>
-                    <Badge variant="secondary">${totalActivitiesCost}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">${totalActivitiesCost}</Badge>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
+              <Card className="shadow border-0">
+                <CardHeader className="bg-blue-50 rounded-t-xl">
+                  <CardTitle className="text-blue-900">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/search/cities')}>
@@ -479,7 +479,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
               </Card>
 
               {/* Tips */}
-              <Card className="bg-blue-50 border-blue-200">
+              <Card className="bg-blue-50 border-blue-200 shadow border-0">
                 <CardHeader>
                   <CardTitle className="text-blue-800">💡 Pro Tips</CardTitle>
                 </CardHeader>
