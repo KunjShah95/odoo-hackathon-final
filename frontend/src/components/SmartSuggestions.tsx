@@ -2,11 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { MapPin, TrendingUp, Plus } from 'lucide-react';
-
-// Legacy direct utils kept as fallback
-import { fetchPopularPlaces, fetchPlaceDetails } from '../utils/opentripmap';
 import { generateCreativeSuggestion } from '../utils/huggingface';
-import { aiSuggest, getNearbyPlaces } from '../utils/api';
+import { aiSuggest, getNearbyPlaces, getWikiSummary } from '../utils/api';
 
 const DEFAULT_COORDS = { lat: 51.5074, lon: -0.1278 }; // London
 
@@ -26,15 +23,65 @@ const SmartSuggestions: React.FC = () => {
         try {
           if (token) {
             const nearby = await getNearbyPlaces({ ...DEFAULT_COORDS, radius: 15000, limit: 3 }, token);
-            const items = nearby.items || [];
-            details = await Promise.all(items.map((p: any) => fetchPlaceDetails(p.xid).catch(()=>p)));
+            const items = (nearby.items || []).map((p: any) => ({
+              id: p.id,
+              osmType: p.osmType,
+              name: p.name,
+              kinds: p.kinds,
+              url: p.url,
+              lat: p.lat,
+              lon: p.lon,
+            }));
+            // For Overpass results we already have basic info; keep as is
+            details = items;
           }
         } catch (e) {
-          // Fallback to direct client call if backend proxy or key fails
-          const rawPlaces = await fetchPopularPlaces({ ...DEFAULT_COORDS, radius: 20000, limit: 3 });
-          details = await Promise.all(rawPlaces.map((p: any) => fetchPlaceDetails(p.xid)));
+          // Fallback: query Overpass API directly (no key) and normalize
+          const qLat = DEFAULT_COORDS.lat;
+          const qLon = DEFAULT_COORDS.lon;
+          const qRadius = 20000;
+          const overpassQuery = `
+            [out:json][timeout:25];
+            (
+              node["tourism"~"attraction|museum|viewpoint|zoo|theme_park|artwork|gallery"](around:${qRadius},${qLat},${qLon});
+              way["tourism"~"attraction|museum|viewpoint|zoo|theme_park|artwork|gallery"](around:${qRadius},${qLat},${qLon});
+              relation["tourism"~"attraction|museum|viewpoint|zoo|theme_park|artwork|gallery"](around:${qRadius},${qLat},${qLon});
+              node["amenity"~"park|theatre|arts_centre"](around:${qRadius},${qLat},${qLon});
+            );
+            out center 50;`;
+          const r = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ data: overpassQuery })
+          });
+          if (!r.ok) throw new Error('Overpass fallback failed');
+          const raw = await r.json();
+          const elements = Array.isArray(raw.elements) ? raw.elements : [];
+          details = elements
+            .map((el: any) => {
+              const tags = el.tags || {};
+              const name = tags.name || tags['name:en'] || '';
+              const lat = el.lat || el.center?.lat || null;
+              const lon = el.lon || el.center?.lon || null;
+              const kinds = [tags.tourism || '', tags.amenity || ''].filter(Boolean).join(',');
+              const url = `https://www.openstreetmap.org/${el.type}/${el.id}`;
+              return { id: String(el.id), osmType: el.type, name, lat, lon, kinds, url };
+            })
+            .filter((p: any) => p.name && p.lat && p.lon)
+            .slice(0, 3);
         }
-        setPlaces(details);
+        // Best-effort: try to enrich with a Wikipedia thumbnail if title matches place name
+        try {
+          const enriched = await Promise.all(details.map(async (p: any) => {
+            try {
+              const w = await getWikiSummary(p.name);
+              return { ...p, image: w?.image || null };
+            } catch { return p; }
+          }));
+          setPlaces(enriched);
+        } catch {
+          setPlaces(details);
+        }
         try {
           if (token) {
             const ai = await aiSuggest('Suggest a unique, sustainable, budget-friendly travel experience:', token);
@@ -78,9 +125,9 @@ const SmartSuggestions: React.FC = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               {places.map(place => (
-                <div key={place.xid} className="rounded-xl overflow-hidden bg-white shadow group hover:shadow-lg transition-shadow">
-                  {place.preview?.source ? (
-                    <img src={place.preview.source} alt={place.name} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div key={place.id} className="rounded-xl overflow-hidden bg-white shadow group hover:shadow-lg transition-shadow">
+                  {place.image ? (
+                    <img src={place.image} alt={place.name} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
                     <div className="w-full h-40 flex items-center justify-center bg-gray-100 text-gray-400">No Image</div>
                   )}
@@ -89,9 +136,9 @@ const SmartSuggestions: React.FC = () => {
                       <MapPin className="w-4 h-4 text-blue-500 mr-2" />
                       <span className="font-semibold text-lg text-blue-900">{place.name}</span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-3">{place.kinds?.split(',')[0] || 'Interesting place'}</p>
+                    <p className="text-gray-600 text-sm mb-3">{(place.kinds || '').split(',')[0] || 'Interesting place'}</p>
                     <Button size="sm" variant="outline" className="mr-2" asChild>
-                      <a href={place.otm} target="_blank" rel="noopener noreferrer">
+                      <a href={place.url || '#'} target="_blank" rel="noopener noreferrer">
                         <TrendingUp className="w-4 h-4 mr-1" />
                         Explore
                       </a>

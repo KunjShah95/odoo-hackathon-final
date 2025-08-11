@@ -11,7 +11,7 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { ArrowLeft, Plus, MapPin, Calendar, Edit, GripVertical, Trash2, Clock, DollarSign } from 'lucide-react';
 import { User, Trip } from '../types';
-import { getStops, createStop, deleteStop, reorderStops } from '../utils/api';
+import { getStops, createStop, deleteStop, reorderStops, getActivities, addActivity as apiAddActivity, deleteActivityById } from '../utils/api';
 import { formatDate, getTripDuration } from '../utils';
 import CollaboratorsPanel from './CollaboratorsPanel';
 import ExpenseSplitter from './ExpenseSplitter';
@@ -56,13 +56,82 @@ const ItemTypes = {
 };
 
 // Draggable City Component
-const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
+const DraggableCity = ({ city, index, moveCity, onEdit, onDelete, onActivitiesChange }: {
   city: CityStop;
   index: number;
   moveCity: (dragIndex: number, hoverIndex: number) => void;
   onEdit: (city: CityStop) => void;
   onDelete: (cityId: string) => void;
+  onActivitiesChange: (cityId: string, activities: Activity[]) => void;
 }) => {
+  const [newActName, setNewActName] = React.useState('');
+  const [newActTime, setNewActTime] = React.useState('09:00');
+  const [newActDuration, setNewActDuration] = React.useState('1-2 hours');
+  const [newActCost, setNewActCost] = React.useState<number>(0);
+  const [newActDesc, setNewActDesc] = React.useState('');
+  const [acts, setActs] = React.useState<Activity[]>(city.activities || []);
+
+  // keep internal state synced if city changes externally
+  React.useEffect(() => { setActs(city.activities || []); }, [city.activities]);
+
+  const addActivity = async () => {
+    if (!newActName.trim()) return;
+    const token = localStorage.getItem('token');
+    const localActivity: Activity = {
+      id: Math.random().toString(36).slice(2),
+      name: newActName.trim(),
+      time: newActTime,
+      duration: newActDuration,
+      cost: Math.max(0, Number(newActCost) || 0),
+      description: newActDesc.trim(),
+    };
+    try {
+      if (!token) throw new Error('Not authenticated');
+      const saved = await apiAddActivity(city.id, {
+        name: localActivity.name,
+        description: localActivity.description || undefined,
+        cost: localActivity.cost || 0,
+      }, token);
+      const mapped: Activity = {
+        id: String(saved.id),
+        name: saved.name,
+        time: localActivity.time,
+        duration: localActivity.duration,
+        cost: saved.cost ?? localActivity.cost ?? 0,
+        description: saved.description || localActivity.description || '',
+      };
+      setActs(prev => {
+        const next = [...prev, mapped];
+        onActivitiesChange(city.id, next);
+        return next;
+      });
+    } catch (e) {
+      // Fallback to local add if backend fails, so UI remains responsive
+      setActs(prev => {
+        const next = [...prev, localActivity];
+        onActivitiesChange(city.id, next);
+        return next;
+      });
+    } finally {
+      setNewActName(''); setNewActTime('09:00'); setNewActDuration('1-2 hours'); setNewActCost(0); setNewActDesc('');
+    }
+  };
+  const removeActivity = async (id: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      if (token && /^\d+$/.test(id)) {
+        await deleteActivityById(id, token);
+      }
+    } catch (e) {
+      // ignore delete errors, proceed to update UI
+    } finally {
+      setActs(prev => {
+        const next = prev.filter(x => x.id !== id);
+        onActivitiesChange(city.id, next);
+        return next;
+      });
+    }
+  };
   const [suggestion, setSuggestion] = React.useState<any>(null);
   const [weather, setWeather] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(false);
@@ -183,9 +252,9 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
             </Button>
           </div>
           
-          {city.activities.length > 0 ? (
+          {acts.length > 0 ? (
             <div className="space-y-2">
-              {city.activities.map(activity => (
+              {acts.map(activity => (
                 <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
@@ -198,6 +267,7 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
                   </div>
+                  <Button size="sm" variant="ghost" className="text-red-600" onClick={() => removeActivity(activity.id)}>Remove</Button>
                 </div>
               ))}
             </div>
@@ -211,6 +281,18 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete }: {
               </Button>
             </div>
           )}
+
+          {/* Add Activity Inline Form */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-2">
+            <Input className="sm:col-span-2" placeholder="Activity name" value={newActName} onChange={e=>setNewActName(e.target.value)} />
+            <Input type="time" value={newActTime} onChange={e=>setNewActTime(e.target.value)} />
+            <Input placeholder="Duration" value={newActDuration} onChange={e=>setNewActDuration(e.target.value)} />
+            <Input type="number" min={0} placeholder="Cost" value={newActCost} onChange={e=>setNewActCost(Number(e.target.value))} />
+            <Input className="sm:col-span-4" placeholder="Description (optional)" value={newActDesc} onChange={e=>setNewActDesc(e.target.value)} />
+            <div className="sm:col-span-1 flex items-center">
+              <Button className="w-full" size="sm" onClick={addActivity}><Plus className="w-4 h-4 mr-1" />Add</Button>
+            </div>
+          </div>
         </div>
 
         {/* Notes */}
@@ -242,15 +324,33 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
       setLoadingStops(true); setStopsError(null);
       try {
         const stops = await getStops(tripId, token);
-        const mapped: CityStop[] = stops.map((s: any, idx: number) => ({
-          id: String(s.id),
-          name: s.city_name,
-          days: 2,
-          startDay: idx * 2 + 1,
-          activities: idx === 0 ? SAMPLE_ACTIVITIES : [],
-          notes: ''
-        }));
-        setCities(mapped);
+        const citiesWithActs: CityStop[] = await Promise.all(
+          stops.map(async (s: any, idx: number) => {
+            let acts: Activity[] = [];
+            try {
+              const rows = await getActivities(s.id, token);
+              acts = (rows || []).map((r: any) => ({
+                id: String(r.id),
+                name: r.name,
+                time: '09:00',
+                duration: r.duration_minutes ? `${r.duration_minutes} min` : '1-2 hours',
+                cost: r.cost ?? 0,
+                description: r.description || '',
+              }));
+            } catch {
+              acts = [];
+            }
+            return {
+              id: String(s.id),
+              name: s.city_name,
+              days: 2,
+              startDay: idx * 2 + 1,
+              activities: acts,
+              notes: ''
+            } as CityStop;
+          })
+        );
+        setCities(citiesWithActs);
       } catch (e: any) {
         setStopsError(e.message || 'Failed to load stops');
       } finally {
@@ -261,6 +361,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
   }, [tripId]);
 
   const [newCityName, setNewCityName] = useState('');
+  const [newCityDays, setNewCityDays] = useState<number>(2);
   const [showAddCity, setShowAddCity] = useState(false);
 
   if (!trip) {
@@ -290,8 +391,14 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
     if (!token) return;
     createStop(tripId, { city_name: newCityName.trim() }, token)
       .then(stop => {
-        setCities(prev => [...prev, { id: String(stop.id), name: stop.city_name, days: 2, startDay: prev.length * 2 + 1, activities: [], notes: '' }]);
+        setCities(prev => {
+          const updated = [...prev, { id: String(stop.id), name: stop.city_name, days: Math.max(1, Number(newCityDays) || 1), startDay: 1, activities: [], notes: '' }];
+          // recompute sequential startDay
+          let d = 1; updated.forEach(c => { c.startDay = d; d += c.days; });
+          return updated;
+        });
         setNewCityName('');
+        setNewCityDays(2);
         setShowAddCity(false);
       })
       .catch(err => {
@@ -310,6 +417,10 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
     if (token) deleteStop(Number(cityId), token).catch(console.error);
     setCities(prev => prev.filter(c => c.id !== cityId));
   };
+
+  const handleActivitiesChange = useCallback((cityId: string, activities: Activity[]) => {
+    setCities(prev => prev.map(c => c.id === cityId ? { ...c, activities } : c));
+  }, []);
 
   const totalActivitiesCost = cities.reduce((total, city) => 
     total + city.activities.reduce((cityTotal, activity) => cityTotal + activity.cost, 0), 0
@@ -398,6 +509,14 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
                           onKeyPress={(e) => e.key === 'Enter' && handleAddCity()}
                           className="flex-1"
                         />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newCityDays}
+                          onChange={(e) => setNewCityDays(Number(e.target.value))}
+                          className="w-28"
+                          placeholder="Days"
+                        />
                         <div className="flex space-x-2">
                           <Button onClick={handleAddCity}>Add</Button>
                           <Button variant="outline" onClick={() => setShowAddCity(false)}>Cancel</Button>
@@ -412,14 +531,15 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
                 {stopsError && <div className="text-sm text-red-600">{stopsError}</div>}
                 {cities.length > 0 ? (
                   <div className="space-y-8">
-                    {cities.map((city, index) => (
+          {cities.map((city, index) => (
                       <DraggableCity
                         key={city.id}
                         city={city}
                         index={index}
                         moveCity={moveCity}
                         onEdit={handleEditCity}
-                        onDelete={handleDeleteCity}
+            onDelete={handleDeleteCity}
+            onActivitiesChange={handleActivitiesChange}
                       />
                     ))}
                   </div>

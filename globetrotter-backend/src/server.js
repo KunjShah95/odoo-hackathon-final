@@ -30,6 +30,22 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => res.send('GlobeTrotter backend is up'));
+// Health check
+app.get('/health', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT 1 as ok');
+    res.json({
+      status: 'ok',
+      db: r.rows[0]?.ok === 1,
+      env: {
+        OPENWEATHER_API_KEY: !!process.env.OPENWEATHER_API_KEY,
+        HUGGINGFACE_API_KEY: !!process.env.HUGGINGFACE_API_KEY,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', error: e?.message || 'unknown' });
+  }
+});
 
 // mount routes
 app.use('/auth', authRoutes);

@@ -227,6 +227,44 @@ export async function reorderStops(tripId: string, ordered: { stopId: number; or
   return res.json();
 }
 
+// Activities
+export async function getActivities(stopId: string | number, token: string) {
+  const res = await fetch(`${API_URL}/activities/stop/${stopId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch activities');
+  return res.json();
+}
+
+export async function addActivity(stopId: string | number, data: { name: string; description?: string; type?: string; cost?: number; duration_minutes?: number; image_url?: string }, token: string) {
+  const res = await fetch(`${API_URL}/activities/${stopId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Failed to add activity');
+  return res.json();
+}
+
+export async function updateActivity(activityId: string | number, updates: any, token: string) {
+  const res = await fetch(`${API_URL}/activities/${activityId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update activity');
+  return res.json();
+}
+
+export async function deleteActivityById(activityId: string | number, token: string) {
+  const res = await fetch(`${API_URL}/activities/${activityId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to delete activity');
+  return res.json();
+}
+
 // AI Suggestion via backend proxy
 export async function aiSuggest(prompt: string, token: string) {
   const res = await fetch(`${API_URL}/ai/suggest`, {
@@ -247,5 +285,12 @@ export async function getNearbyPlaces(params: { lat: number; lon: number; radius
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch nearby places');
+  return res.json();
+}
+
+// Wikipedia summary (no auth required)
+export async function getWikiSummary(title: string) {
+  const res = await fetch(`${API_URL}/integrations/wiki/summary?title=${encodeURIComponent(title)}`);
+  if (!res.ok) return null;
   return res.json();
 }

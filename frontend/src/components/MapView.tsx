@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 // Leaflet CSS should be imported once globally (can move to globals.css if desired)
 import 'leaflet/dist/leaflet.css';
 import { Trip } from '../types';
-import { geocodeCity } from '../utils/opentripmap';
+import { geocodeCity } from '@utils/geo';
 
 interface MapViewProps {
   trip?: Trip;

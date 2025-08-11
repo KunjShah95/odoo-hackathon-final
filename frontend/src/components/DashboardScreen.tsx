@@ -29,6 +29,8 @@ import SmartSuggestions from './SmartSuggestions';
 import BadgesPanel from './BadgesPanel';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import NotificationCenter from './NotificationCenter';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import DashboardCalendar from '@components/DashboardCalendar';
 
 interface DashboardScreenProps {
   user?: User;
@@ -76,6 +78,16 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState<string | null>(null);
+  const [showBudgetDialog, setShowBudgetDialog] = useState(false);
+  const [budgetTotals, setBudgetTotals] = useState<{ total: number; byTrip: Record<string, number> }>({ total: 0, byTrip: {} });
+
+  // Compute budget totals from trips (kept simple and aligned with BudgetScreen totalCost)
+  useEffect(() => {
+    const byTrip: Record<string, number> = {};
+    (trips || []).forEach(t => { byTrip[t.id] = Number(t.totalCost) || 0; });
+    const total = Object.values(byTrip).reduce((a, b) => a + b, 0);
+    setBudgetTotals({ total, byTrip });
+  }, [trips]);
 
   // Derive smart local notifications (client heuristic) for hackathon demo
   const heuristicNotifs = useMemo<NotificationItem[]>(() => {
@@ -134,7 +146,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
 
   const upcomingTrips = (trips || []).filter(trip => new Date(trip.startDate) > new Date()).slice(0, 3);
   const recentTrips = (trips || []).slice(0, 3);
-  const totalBudget = (trips || []).reduce((sum, trip) => sum + trip.totalCost, 0);
+  const fallbackTotalBudget = (trips || []).reduce((sum, trip) => sum + (Number(trip.totalCost) || 0), 0);
 
   const handleCreateFromTemplate = (template: typeof TRIP_TEMPLATES[0]) => {
     // Navigate to create trip with pre-filled data
@@ -268,8 +280,8 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="shadow-md border-0">
-            <CardContent className="p-6 flex items-center">
+          <button onClick={() => navigate('/trips')} className="text-left rounded-xl shadow-md border-0 bg-white">
+            <div className="p-6 flex items-center">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
                 <MapPin className="w-6 h-6 text-blue-600" />
               </div>
@@ -277,19 +289,19 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                 <p className="text-2xl font-bold">{(trips || []).length}</p>
                 <p className="text-sm text-blue-700 font-medium">Total Trips</p>
               </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md border-0">
-            <CardContent className="p-6 flex items-center">
+            </div>
+          </button>
+          <button onClick={() => setShowBudgetDialog(true)} className="text-left rounded-xl shadow-md border-0 bg-white">
+            <div className="p-6 flex items-center">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
                 <DollarSign className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">${totalBudget.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${(budgetTotals.total || fallbackTotalBudget).toLocaleString()}</p>
                 <p className="text-sm text-green-700 font-medium">Total Budget</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </button>
           <Card className="shadow-md border-0">
             <CardContent className="p-6 flex items-center">
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
@@ -380,66 +392,18 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                 </Card>
               </div>
 
-              {/* Upcoming Trips */}
+              {/* Upcoming Trips as Calendar */}
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Upcoming Trips</CardTitle>
-                      <CardDescription>Your next adventures await</CardDescription>
+                      <CardTitle>Upcoming (Calendar)</CardTitle>
+                      <CardDescription>Monthly view of your trips</CardDescription>
                     </div>
-                    <Link to="/trips">
-                      <Button variant="ghost" size="sm">View All</Button>
-                    </Link>
+                    <Link to="/trips"><Button variant="ghost" size="sm">View All</Button></Link>
                   </CardHeader>
                   <CardContent>
-                    {upcomingTrips.length > 0 ? (
-                      <div className="space-y-4">
-                        {(upcomingTrips || []).map(trip => {
-                          const status = getTripStatus(trip);
-                          return (
-                            <div key={trip.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors space-y-3 sm:space-y-0">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <h4 className="font-semibold">{trip.name}</h4>
-                                  <Badge className={getStatusColor(status)}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-gray-600 mb-2">{trip.description}</p>
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0">
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <Calendar className="w-4 h-4 mr-1" />
-                                    {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
-                                  </div>
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <MapPin className="w-4 h-4 mr-1" />
-                                    {(trip.cities || []).length} {(trip.cities || []).length === 1 ? 'city' : 'cities'}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Badge variant="secondary">${trip.totalCost.toLocaleString()}</Badge>
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => navigate(`/trip/${trip.id}/view`)}
-                                >
-                                  View
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-4">No upcoming trips yet.</p>
-                        <Button onClick={() => navigate('/create-trip')}>
-                          Plan Your First Trip
-                        </Button>
-                      </div>
-                    )}
+                    <DashboardCalendar trips={trips || []} />
                   </CardContent>
                 </Card>
               </div>
@@ -471,6 +435,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           <div>
+                          
                             <h3 className="font-semibold">{template.name}</h3>
                             <p className="text-sm text-gray-600">{template.description}</p>
                           </div>
@@ -564,6 +529,31 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
             </Card>
           </TabsContent>
         </Tabs>
+        {/* Budget Dialog */}
+        <Dialog open={showBudgetDialog} onOpenChange={setShowBudgetDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Budgets by Trip</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 max-h-72 overflow-auto">
+              {(trips || []).map((t) => (
+                <div key={t.id} className="flex items-center justify-between border rounded p-2">
+                  <div>
+                    <div className="font-medium">{t.name}</div>
+                    <div className="text-xs text-gray-500">{new Date(t.startDate).toLocaleDateString()} - {new Date(t.endDate).toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge>${((budgetTotals.byTrip[t.id] ?? Number(t.totalCost)) || 0).toLocaleString()}</Badge>
+                    <Button size="sm" onClick={() => navigate(`/trip/${t.id}/budget`)}>Edit</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBudgetDialog(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

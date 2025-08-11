@@ -5,23 +5,33 @@ This is the frontend for the GlobeTrotter Travel Planning Platform, built with R
 ## Getting Started
 
 1. **Install dependencies:**
-   ```
+
+   ```bash
    npm install
    ```
 
 2. **Run the development server:**
-   ```
+
+   ```bash
    npm run dev
    ```
 
 3. **Build for production:**
-   ```
+
+   ```bash
    npm run build
    ```
 
 4. **Preview production build:**
-   ```
+
+   ```bash
    npm run preview
+   ```
+
+5. **Environment variables:** Copy `.env.example` to `.env` and set API URL
+
+   ```env
+   VITE_API_URL=http://localhost:5000
    ```
 
 ## Project Structure
