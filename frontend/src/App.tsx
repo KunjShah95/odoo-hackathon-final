@@ -26,27 +26,14 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (email: string, password: string) => {
-    setAuthError(null);
-    setLoading(true);
-    try {
-      const res = await apiLogin(email, password);
-      setToken(res.token);
-      // Combine first_name and last_name for frontend User type
-      const user = {
-        ...res.user,
-        name: [res.user.first_name, res.user.last_name].filter(Boolean).join(' ')
-      };
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      // Fetch trips after login
-      const tripsRes = await getTrips(res.token);
-      setTrips(tripsRes.trips || []);
-    } catch (err: any) {
-      setAuthError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+  const handleLogin = (email: string, password: string) => {
+    setCurrentUser({
+      id: '1',
+      name: 'Alex Johnson',
+      email: email,
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+    });
+    setIsAuthenticated(true);
   };
 
   const handleSignup = async (name: string, email: string, password: string) => {
