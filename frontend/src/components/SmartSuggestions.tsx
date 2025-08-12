@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { MapPin, TrendingUp, Plus } from 'lucide-react';
 import { getNearbyPlaces, getPublicNearbyPlaces, getWikiSummary, searchWiki, getStops, addActivity, fetchImages } from '../utils/api';
+import { POPULAR_DESTINATIONS } from '../constants';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Trip } from '../types';
@@ -29,6 +30,13 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({ trips = [] }) => {
   const [selectedStopId, setSelectedStopId] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  // Customization fields
+  const [customName, setCustomName] = useState<string>('');
+  const [customType, setCustomType] = useState<string>('poi');
+  const [customCost, setCustomCost] = useState<string>('0');
+  const [customDesc, setCustomDesc] = useState<string>('');
+  const [customImage, setCustomImage] = useState<string>('');
+  const [showCustomize, setShowCustomize] = useState<boolean>(true);
 
   const tripsById = useMemo(() => {
     const m: Record<string, Trip> = {} as any;
@@ -143,9 +151,33 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({ trips = [] }) => {
               } catch { return { ...p, page }; }
             } catch { return p; }
           }));
-          setPlaces(enriched);
+          const list = Array.isArray(enriched) ? enriched : [];
+          if (list.length === 0) {
+            const fallback = (POPULAR_DESTINATIONS || []).slice(0, 3).map((d, idx) => ({
+              id: `popular-${idx}-${d.name}`,
+              name: d.name,
+              kinds: 'Popular',
+              image: d.image,
+              url: `https://www.google.com/search?q=${encodeURIComponent(d.name + ' attraction')}`,
+            }));
+            setPlaces(fallback);
+          } else {
+            setPlaces(list);
+          }
         } catch {
-          setPlaces(details);
+          const list = Array.isArray(details) ? details : [];
+          if (list.length === 0) {
+            const fallback = (POPULAR_DESTINATIONS || []).slice(0, 3).map((d, idx) => ({
+              id: `popular-${idx}-${d.name}`,
+              name: d.name,
+              kinds: 'Popular',
+              image: d.image,
+              url: `https://www.google.com/search?q=${encodeURIComponent(d.name + ' attraction')}`,
+            }));
+            setPlaces(fallback);
+          } else {
+            setPlaces(list);
+          }
         }
       } catch (e: any) {
         setError(e.message || 'Failed to load suggestions');
@@ -231,6 +263,12 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({ trips = [] }) => {
                           setSelectedPlace(place);
                           setOpen(true);
                           setSaveMsg(null);
+                          // Prefill custom fields
+                          setCustomName(place?.name || '');
+                          setCustomType('poi');
+                          setCustomCost('0');
+                          setCustomDesc(`Suggested place added from Smart Suggestions. ${place.url ? 'More: ' + place.url : ''}`.trim());
+                          setCustomImage(place?.image || '');
                           if ((trips || []).length > 0) {
                             const firstTripId = (trips || [])[0].id;
                             setSelectedTripId(firstTripId);
@@ -302,6 +340,37 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({ trips = [] }) => {
                 </SelectContent>
               </Select>
             </div>
+            {/* Customize toggle */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Customize details</div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowCustomize(v => !v)}>
+                {showCustomize ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+            {showCustomize && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Name</div>
+                  <input className="w-full border rounded px-2 py-1" value={customName} onChange={e => setCustomName(e.target.value)} />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Type</div>
+                  <input className="w-full border rounded px-2 py-1" value={customType} onChange={e => setCustomType(e.target.value)} placeholder="e.g., poi, sight, food" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Estimated Cost</div>
+                  <input className="w-full border rounded px-2 py-1" type="number" min="0" step="0.01" value={customCost} onChange={e => setCustomCost(e.target.value)} />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Image URL</div>
+                  <input className="w-full border rounded px-2 py-1" value={customImage} onChange={e => setCustomImage(e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <div className="text-xs text-gray-600 mb-1">Notes / Description</div>
+                  <textarea className="w-full border rounded px-2 py-1 h-20" value={customDesc} onChange={e => setCustomDesc(e.target.value)} />
+                </div>
+              </div>
+            )}
             {saveMsg && <div className="text-sm text-green-700">{saveMsg}</div>}
           </div>
           <DialogFooter>
@@ -314,12 +383,13 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({ trips = [] }) => {
                 try {
                   const token = localStorage.getItem('token');
                   if (!token) throw new Error('Not authenticated');
+                  const costNum = Number(customCost);
                   await addActivity(selectedStopId, {
-                    name: selectedPlace.name,
-                    description: `Suggested place added from Smart Suggestions. ${selectedPlace.url ? 'More: ' + selectedPlace.url : ''}`.trim(),
-                    type: 'poi',
-                    cost: 0,
-                    image_url: selectedPlace.image || undefined,
+                    name: (customName || selectedPlace.name || 'New activity').slice(0, 120),
+                    description: (customDesc || '').slice(0, 600),
+                    type: (customType || 'poi').slice(0, 30),
+                    cost: isNaN(costNum) ? 0 : costNum,
+                    image_url: customImage || selectedPlace.image || undefined,
                   }, token);
                   setSaveMsg('Added to trip!');
                   // Clean up shortly and close

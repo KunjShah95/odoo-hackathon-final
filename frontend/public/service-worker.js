@@ -1,5 +1,6 @@
 /* Basic service worker for offline support */
-const CACHE_NAME = 'globetrotter-cache-v1';
+// Bump cache version to purge old cached UI (e.g., removed AI banner)
+const CACHE_NAME = 'globetrotter-cache-v2';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -7,17 +8,20 @@ const CORE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Activate updated SW immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
   );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-    ))
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+    // Take control of all clients ASAP so new UI is visible without extra reloads
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
