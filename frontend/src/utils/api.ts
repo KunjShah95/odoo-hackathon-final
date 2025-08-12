@@ -38,6 +38,10 @@ export async function getWeather(city: string, token: string) {
 // PDF Export
 export function getTripPDFUrl(tripId: string) {
   const token = localStorage.getItem('token');
+  if (!token) {
+    console.warn('No auth token for PDF export');
+    return '#';
+  }
   return `${API_URL}/pdf-export/${tripId}?token=${token}`;
 }
 
@@ -103,7 +107,15 @@ export async function inviteCollaborator(tripId: string, email: string, role: st
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ email, role })
   });
-  if (!res.ok) throw new Error('Failed to invite collaborator');
+  if (!res.ok) {
+    try {
+      const data = await res.json();
+      const msg = data?.error || data?.message || 'Failed to invite collaborator';
+      throw new Error(msg);
+    } catch {
+      throw new Error('Failed to invite collaborator');
+    }
+  }
   return res.json();
 }
 
@@ -398,7 +410,15 @@ export async function getExpenses(tripId: string, token: string) {
 }
 export async function addExpense(tripId: string, data: { category:string; amount:number; currency?:string; description?:string; date?:string }, token: string) {
   const res = await fetch(`${API_URL}/expenses/${tripId}`, { method:'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) });
-  if (!res.ok) throw new Error('Failed to add expense');
+  if (!res.ok) {
+    try {
+      const err = await res.json();
+      const msg = err?.error || err?.message || 'Failed to add expense';
+      throw new Error(msg);
+    } catch {
+      throw new Error('Failed to add expense');
+    }
+  }
   return res.json();
 }
 export async function deleteExpense(expenseId: number, token: string) {

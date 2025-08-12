@@ -13,6 +13,7 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,11 +40,16 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
   }, [tripId]);
 
   const handleInvite = async () => {
+    setError(null);
     if (!inviteEmail || !tripId) return;
+    // basic email check
+    const emailOk = /.+@.+\..+/.test(inviteEmail);
+    if (!emailOk) { setError('Enter a valid email address.'); return; }
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) { setError('Please log in to invite.'); return; }
     try {
-      await import('../utils/api').then(m => m.inviteCollaborator(tripId, inviteEmail, 'editor', token));
+      setInviting(true);
+      await import('../utils/api').then(m => m.inviteCollaborator(tripId, inviteEmail.trim(), 'editor', token));
       setInviteStatus(`Invitation sent to ${inviteEmail}`);
       setInviteEmail('');
       // refresh
@@ -57,7 +63,9 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
       setTimeout(() => setInviteStatus(null), 2000);
     } catch (e: any) {
       setInviteStatus(null);
-      setError(e.message || 'Invite failed');
+      setError(e?.message || 'Invite failed');
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -89,8 +97,8 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
             onChange={e => setInviteEmail(e.target.value)}
             className="flex-1"
           />
-          <Button onClick={handleInvite} disabled={!inviteEmail}>
-            <UserPlus className="w-4 h-4 mr-1" /> Invite
+          <Button onClick={handleInvite} disabled={!inviteEmail || inviting}>
+            <UserPlus className="w-4 h-4 mr-1" /> {inviting? 'Inviting…':'Invite'}
           </Button>
         </div>
         {inviteStatus && <div className="text-green-600 mb-2 text-sm">{inviteStatus}</div>}

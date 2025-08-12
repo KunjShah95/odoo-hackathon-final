@@ -4,12 +4,24 @@ export async function geocodeCity(name: string) {
   if (!name || !token) return null;
   // Vite env
   const API_URL: string = (import.meta as any).env.VITE_API_URL;
-  const url = `${API_URL}/geo/forward?city=${encodeURIComponent(name)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
-    return { lat: data.lat, lon: data.lon, name: data.name || name };
+  if (!API_URL) {
+    console.error('VITE_API_URL not configured');
+    return null;
   }
-  return null;
+  const url = `${API_URL}/geo/forward?city=${encodeURIComponent(name)}`;
+  try {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      console.warn(`Geocoding failed for ${name}: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    const data = await res.json();
+    if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
+      return { lat: data.lat, lon: data.lon, name: data.name || name };
+    }
+    return null;
+  } catch (error) {
+    console.error(`Geocoding error for ${name}:`, error);
+    return null;
+  }
 }

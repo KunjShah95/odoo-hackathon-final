@@ -269,7 +269,13 @@ export default function ItineraryViewScreen({ user, trips }: { user: User; trips
                   Edit Itinerary
                 </Button>
                 <a href={getTripPDFUrl(tripId!)} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full justify-start mt-2">
+                  <Button variant="outline" className="w-full justify-start mt-2" onClick={(e) => {
+                    const url = getTripPDFUrl(tripId!);
+                    if (url === '#') {
+                      e.preventDefault();
+                      alert('Please log in to export PDF');
+                    }
+                  }}>
                     <span role="img" aria-label="PDF">📄</span> Export as PDF
                   </Button>
                 </a>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,17 +6,17 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, Clock, DollarSign, Star, Plus, MapPin } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { User } from '../types';
+import { Trip, User } from '../types';
 import { SAMPLE_ACTIVITIES, ACTIVITY_CATEGORIES } from '../constants';
+import { addActivity, getStops } from '../utils/api';
 
-interface ActivitySearchScreenProps {
-  user: User;
-}
+interface ActivitySearchScreenProps { user: User; trips?: Trip[] }
 
-export default function ActivitySearchScreen({ user }: ActivitySearchScreenProps) {
+export default function ActivitySearchScreen({ user, trips = [] }: ActivitySearchScreenProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [adding, setAdding] = useState<Record<string, 'adding' | 'added' | 'error'>>({});
 
   const filteredActivities = (SAMPLE_ACTIVITIES || []).filter(activity => {
     const matchesSearch = activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -24,6 +24,26 @@ export default function ActivitySearchScreen({ user }: ActivitySearchScreenProps
     const matchesCategory = categoryFilter === 'all' || activity.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  const hasTrips = useMemo(()=> (trips || []).length>0, [trips]);
+  async function handleAddToTrip(activity: any) {
+    try {
+      if (!hasTrips) { navigate('/create-trip'); return; }
+      const firstTripId = (trips || [])[0].id;
+      const token = (user as any).token || localStorage.getItem('token');
+      if (!token) { navigate('/login'); return; }
+      setAdding(prev=> ({ ...prev, [activity.id]: 'adding' }));
+      const stops = await getStops(firstTripId, token);
+      if (!Array.isArray(stops) || stops.length===0) { navigate(`/trip/${firstTripId}/build`); return; }
+      const stopId = String(stops[0].id);
+      await addActivity(stopId, { name: activity.name, description: activity.description, cost: Number(activity.price)||0 }, token);
+      setAdding(prev=> ({ ...prev, [activity.id]: 'added' }));
+      setTimeout(()=> setAdding(prev=> { const next={...prev}; delete next[activity.id]; return next; }), 1200);
+    } catch (e) {
+      setAdding(prev=> ({ ...prev, [activity.id]: 'error' }));
+      setTimeout(()=> setAdding(prev=> { const next={...prev}; delete next[activity.id]; return next; }), 1500);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -108,9 +128,14 @@ export default function ActivitySearchScreen({ user }: ActivitySearchScreenProps
                         <DollarSign className="w-4 h-4 text-green-600" />
                         <span className="font-semibold">${activity.price}</span>
                       </div>
-                      <Button size="sm">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddToTrip(activity)}
+                        title={!hasTrips ? 'Create a trip first' : 'Add to first trip'}
+                        disabled={adding[activity.id]==='adding'}
+                      >
                         <Plus className="w-4 h-4 mr-1" />
-                        Add to Trip
+                        {adding[activity.id]==='adding' ? 'Adding...' : adding[activity.id]==='added' ? 'Added' : 'Add to Trip'}
                       </Button>
                     </div>
                   </div>

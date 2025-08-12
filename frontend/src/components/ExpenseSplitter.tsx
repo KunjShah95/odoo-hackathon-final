@@ -19,23 +19,40 @@ const ExpenseSplitter: React.FC<ExpenseSplitterProps> = ({ tripId, participants 
   const [settlement, setSettlement] = useState<{ user_id:number; net:number }[] | null>(null);
   const [sharesDraft, setSharesDraft] = useState<Record<number, number>>({});
   const [selectedExpense, setSelectedExpense] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(()=>{ if(token) refresh(); }, [tripId]);
 
   function refresh() {
-    getExpenses(tripId, token).then(setExpenses).catch(()=>{});
-    getTripSettlement(tripId, token).then(r=> setSettlement(r.settlements)).catch(()=>{});
+    if(!token) return;
+    getExpenses(tripId, token).then(setExpenses).catch((e)=>{ console.warn(e); });
+    getTripSettlement(tripId, token).then(r=> setSettlement(r.settlements)).catch((e)=>{ console.warn(e); });
   }
 
   const add = () => {
-    if(!desc || !amount) return;
+    setError(null);
+    if(!token){ setError('Please log in to add expenses.'); return; }
+    if(!desc || !amount) { setError('Description and amount are required.'); return; }
+    setAdding(true);
     addExpense(tripId, { category, amount: Number(amount), description: desc }, token).then(()=>{
       setDesc(''); setAmount(''); refresh();
-    }).catch(()=>{});
+    }).catch((e:any)=>{ setError(e?.message || 'Failed to add expense'); }).finally(()=> setAdding(false));
   };
-  const remove = (id:number) => { deleteExpense(id, token).then(()=>refresh()).catch(()=>{}); };
+  const remove = (id:number) => {
+    setError(null);
+    if(!token){ setError('Please log in to delete expenses.'); return; }
+    deleteExpense(id, token).then(()=>refresh()).catch((e:any)=> setError(e?.message || 'Failed to delete expense'));
+  };
 
-  const openShares = (id:number) => { setSelectedExpense(id); const equal = 1 / participants.length; const draft:Record<number,number>={}; participants.forEach(p=> draft[p.id]=equal); setSharesDraft(draft); };
+  const openShares = (id:number) => {
+    setSelectedExpense(id);
+    const count = participants.length || 1;
+    const equal = 1 / count;
+    const draft:Record<number,number>={};
+    participants.forEach(p=> draft[p.id]=equal);
+    setSharesDraft(draft);
+  };
   const saveShares = () => {
     if(selectedExpense==null) return; const shares = Object.entries(sharesDraft).map(([uid, share])=>({ user_id:Number(uid), share_amount: Number(share)}));
     setExpenseShares(selectedExpense, shares, token).then(()=>{ setSelectedExpense(null); refresh(); }).catch(()=>{});
@@ -49,13 +66,17 @@ const ExpenseSplitter: React.FC<ExpenseSplitterProps> = ({ tripId, participants 
         <CardTitle className="flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-600" /> Expenses & Split</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!token && (
+          <div className="text-xs text-red-600">You are not logged in. Please log in to manage expenses.</div>
+        )}
         <div className="flex flex-wrap gap-2">
           <Input placeholder="Description" value={desc} onChange={e=>setDesc(e.target.value)} className="w-40" />
             <Input placeholder="Amount" type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-28" />
             <Input placeholder="Category" value={category} onChange={e=>setCategory(e.target.value)} className="w-28" />
-            <Button onClick={add} disabled={!desc || !amount}>Add</Button>
+            <Button onClick={add} disabled={!desc || !amount || !token || adding}>{adding? 'Adding…':'Add'}</Button>
           <div className="ml-auto font-semibold">Total: ${total.toFixed(2)}</div>
         </div>
+        {error && <div className="text-xs text-red-600">{error}</div>}
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-500"><th>Description</th><th>Amount</th><th>Category</th><th /></tr></thead>
           <tbody>

@@ -74,6 +74,7 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete, onActivitiesCh
   // keep internal state synced if city changes externally
   React.useEffect(() => { setActs(city.activities || []); }, [city.activities]);
 
+  const nameInputRef = React.useRef<HTMLInputElement | null>(null);
   const addActivity = async () => {
     if (!newActName.trim()) return;
     const token = localStorage.getItem('token');
@@ -246,7 +247,14 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete, onActivitiesCh
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Activities</h4>
-            <Button size="sm" variant="ghost">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (newActName.trim()) { void addActivity(); }
+                else nameInputRef.current?.focus();
+              }}
+            >
               <Plus className="w-4 h-4 mr-1" />
               Add Activity
             </Button>
@@ -275,7 +283,7 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete, onActivitiesCh
             <div className="text-center py-6 bg-gray-50 rounded-lg">
               <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-gray-600 mb-3">No activities added yet</p>
-              <Button size="sm">
+              <Button size="sm" onClick={() => { if (newActName.trim()) { void addActivity(); } else nameInputRef.current?.focus(); }}>
                 <Plus className="w-4 h-4 mr-1" />
                 Add Your First Activity
               </Button>
@@ -284,7 +292,7 @@ const DraggableCity = ({ city, index, moveCity, onEdit, onDelete, onActivitiesCh
 
           {/* Add Activity Inline Form */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-2">
-            <Input className="sm:col-span-2" placeholder="Activity name" value={newActName} onChange={e=>setNewActName(e.target.value)} />
+            <Input ref={nameInputRef} className="sm:col-span-2" placeholder="Activity name" value={newActName} onChange={e=>setNewActName(e.target.value)} onKeyDown={e=> { if (e.key==='Enter') addActivity(); }} />
             <Input type="time" value={newActTime} onChange={e=>setNewActTime(e.target.value)} />
             <Input placeholder="Duration" value={newActDuration} onChange={e=>setNewActDuration(e.target.value)} />
             <Input type="number" min={0} placeholder="Cost" value={newActCost} onChange={e=>setNewActCost(Number(e.target.value))} />
@@ -476,7 +484,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
           <CollaboratorsPanel tripId={tripId} />
           <ExpenseSplitter tripId={tripId!} participants={participants} />
           <PackingListGenerator />
-          <MapView trip={trip} />
+          <MapView trip={{...trip, cities: cities.map(c => c.name)}} />
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
             {/* Main Content */}
             <div className="lg:col-span-3">

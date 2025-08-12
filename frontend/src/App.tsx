@@ -132,7 +132,7 @@ function App() {
           <Route path="/trip/:tripId/build" element={<ItineraryBuilderScreen {...commonProps} onUpdateTrip={updateTrip} />} />
           <Route path="/trip/:tripId/view" element={<ItineraryViewScreen {...commonProps} />} />
           <Route path="/search/cities" element={<CitySearchScreen user={currentUser!} />} />
-          <Route path="/search/activities" element={<ActivitySearchScreen user={currentUser!} />} />
+          <Route path="/search/activities" element={<ActivitySearchScreen user={currentUser!} trips={trips} />} />
           <Route path="/trip/:tripId/budget" element={<BudgetScreen {...commonProps} />} />
           <Route path="/trip/:tripId/calendar" element={<CalendarScreen {...commonProps} />} />
 <Route path="/trip/:tripId/share" element={<SharedItineraryScreen trips={trips} />} />

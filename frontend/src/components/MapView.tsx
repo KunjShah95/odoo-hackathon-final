@@ -53,7 +53,11 @@ const MapView: React.FC<MapViewProps> = ({ trip }) => {
     }
 
     async function plot(L: typeof import('leaflet')) {
-      if (!trip?.cities?.length) return;
+      if (!trip?.cities?.length) {
+        setError('No cities to display on map');
+        setLoading(false);
+        return;
+      }
       setLoading(true); setError(null);
       try {
         const coords: [number, number][] = [];
@@ -79,6 +83,7 @@ const MapView: React.FC<MapViewProps> = ({ trip }) => {
             sessionStorage.setItem(`geo:${city}`, JSON.stringify(cityCache[city]));
             coords.push([g.lat, g.lon]);
           } else {
+            console.warn(`Failed to geocode city: ${city}`);
             // cache failure with TTL
             sessionStorage.setItem(`geo:${city}`, JSON.stringify({ failUntil: Date.now() + FAIL_TTL_MS }));
           }
@@ -119,10 +124,16 @@ const MapView: React.FC<MapViewProps> = ({ trip }) => {
       <CardContent>
     {loading && <div className="text-xs text-gray-500 mb-1">Geocoding cities...</div>}
     {error && <div className="text-xs text-red-600 mb-1">{error}</div>}
+    {!trip?.cities?.length && !loading && !error && (
+      <div className="text-center py-8">
+        <div className="text-gray-400 mb-2">No cities to display</div>
+        <div className="text-xs text-gray-500">Add cities to your trip to see the route map</div>
+      </div>
+    )}
     {totalDistanceKm != null && !loading && !error && (
       <div className="text-xs text-gray-600 mb-1">Total route distance: <span className="font-medium">{totalDistanceKm} km</span></div>
     )}
-    <div id={mapId} className="h-72 w-full rounded-md overflow-hidden" />
+    <div id={mapId} className="h-72 w-full rounded-md overflow-hidden" style={{ display: (!trip?.cities?.length && !loading) ? 'none' : 'block' }} />
       </CardContent>
     </Card>
   );

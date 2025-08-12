@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Share2, Copy, Facebook, Twitter, ArrowLeft, MapPin, Calendar, DollarSign, Download } from 'lucide-react';
 import { Trip } from '../types';
 import { getTripDuration, copyToClipboard, formatDate } from '../utils';
+import { getTripPDFUrl } from '../utils/api';
 
 interface SharedItineraryScreenProps {
   trips: Trip[];
@@ -90,7 +91,14 @@ export default function SharedItineraryScreen({ trips, publicKey }: SharedItiner
                       <Button variant="outline" size="sm" onClick={() => window.open(`/api/calendar/trip/${publicKey}.ics`, '_blank') }>
                         <Download className="w-4 h-4 mr-2" /> ICS
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => window.open(`/api/pdf-export/${tripId}?token=${localStorage.getItem('token')}`,'_blank') }>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const url = getTripPDFUrl(tripId!);
+                        if (url === '#') {
+                          alert('Please log in to export PDF');
+                          return;
+                        }
+                        window.open(url,'_blank');
+                      }}>
                         <Download className="w-4 h-4 mr-2" /> PDF
                       </Button>
                     </>
