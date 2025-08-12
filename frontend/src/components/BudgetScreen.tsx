@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, DollarSign, PieChart, TrendingUp } from 'lucide-react';
-import { getTripBudget } from '../utils/api';
+import { getTripBudget, upsertTripBudget, getExpenses } from '../utils/api';
+import { Input } from './ui/input';
 
 interface User {
   id: string;
@@ -30,6 +31,8 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
   const [budget, setBudget] = useState<any>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
   const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [expensesTotal, setExpensesTotal] = useState<number>(0);
+  const [edit, setEdit] = useState<{ transport_cost?: number; stay_cost?: number; activity_cost?: number; meal_cost?: number } | null>(null);
 
   useEffect(() => {
     const fetchBudget = async () => {
@@ -39,8 +42,13 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
       try {
         const token = (user as any).token || localStorage.getItem('token');
         if (!token) throw new Error('No auth token');
-        const data = await getTripBudget(tripId as string, token);
-        setBudget(data);
+        const [b, exps] = await Promise.all([
+          getTripBudget(tripId as string, token).catch(()=>null),
+          getExpenses(tripId as string, token).catch(()=>[])
+        ]);
+        if (b) setBudget(b);
+        const total = Array.isArray(exps) ? exps.reduce((s: number, e: any) => s + Number(e.amount||0), 0) : 0;
+        setExpensesTotal(total);
       } catch (e: any) {
         setBudgetError(e.message || 'Failed to fetch budget');
       } finally {
@@ -54,12 +62,21 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
     return <div>Trip not found</div>;
   }
 
-  // Example breakdown, replace with real data if available
-  const budgetBreakdown = [
-    { category: 'Accommodation', amount: 800, percentage: 40 },
-    { category: 'Transportation', amount: 600, percentage: 30 },
-    { category: 'Food & Dining', amount: 400, percentage: 20 },
-    { category: 'Activities', amount: 200, percentage: 10 }
+  const current = budget && budget.transport_cost!==undefined ? budget : null;
+  const totals = current ? {
+    transport_cost: Number(current.transport_cost||0),
+    stay_cost: Number(current.stay_cost||0),
+    activity_cost: Number(current.activity_cost||0),
+    meal_cost: Number(current.meal_cost||0),
+    total_cost: Number(current.total_cost||0)
+  } : null;
+  const display = edit || totals || { transport_cost: 0, stay_cost: 0, activity_cost: 0, meal_cost: 0, total_cost: 0 } as any;
+  const grandTotal = display.transport_cost + display.stay_cost + display.activity_cost + display.meal_cost;
+  const breakdown = [
+    { key: 'stay_cost', label: 'Accommodation', value: display.stay_cost },
+    { key: 'transport_cost', label: 'Transportation', value: display.transport_cost },
+    { key: 'meal_cost', label: 'Food & Dining', value: display.meal_cost },
+    { key: 'activity_cost', label: 'Activities', value: display.activity_cost },
   ];
 
   // Helper to get symbol
@@ -94,15 +111,15 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-600">${trip.totalCost}</p>
-                    <p className="text-sm text-gray-600">Total Budget</p>
+                    <p className="text-2xl font-bold text-blue-600">${grandTotal.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">Planned Budget</p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <p className="text-2xl font-bold text-green-600">$1,800</p>
-                    <p className="text-sm text-gray-600">Estimated Cost</p>
+                    <p className="text-2xl font-bold text-green-600">${expensesTotal.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">Recorded Expenses</p>
                   </div>
                   <div className="text-center p-4 bg-orange-50 rounded-lg">
-                    <p className="text-2xl font-bold text-orange-600">$700</p>
+                    <p className="text-2xl font-bold text-orange-600">${Math.max(0, grandTotal - expensesTotal).toFixed(2)}</p>
                     <p className="text-sm text-gray-600">Remaining</p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -130,23 +147,54 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {budgetBreakdown.map(item => (
-                    <div key={item.category} className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium">{item.category}</span>
-                          <span className="font-semibold">${item.amount}</span>
+                  {breakdown.map(item => {
+                    const pct = grandTotal>0 ? Math.round((item.value / grandTotal) * 100) : 0;
+                    return (
+                      <div key={item.key} className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium">{item.label}</span>
+                            {edit ? (
+                              <Input type="number" className="w-28" value={item.value}
+                                onChange={e=> setEdit(prev=> ({ ...(prev||{}), [item.key]: Number(e.target.value) }))} />
+                            ) : (
+                              <span className="font-semibold">${item.value.toFixed(2)}</span>
+                            )}
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${pct}%` }}></div>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{pct}% of budget</p>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${item.percentage}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{item.percentage}% of budget</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  {edit ? (
+                    <>
+                      <Button size="sm" onClick={async ()=>{
+                        const token = (user as any).token || localStorage.getItem('token');
+                        if(!token) return;
+                        try {
+                          const payload = { transport_cost: edit.transport_cost||0, stay_cost: edit.stay_cost||0, activity_cost: edit.activity_cost||0, meal_cost: edit.meal_cost||0 };
+                          const saved = await upsertTripBudget(tripId as string, payload, token);
+                          setBudget(saved);
+                          setEdit(null);
+                        } catch(e) {
+                          // ignore for brevity
+                        }
+                      }}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={()=> setEdit(null)}>Cancel</Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={()=> setEdit({
+                      transport_cost: totals?.transport_cost||0,
+                      stay_cost: totals?.stay_cost||0,
+                      activity_cost: totals?.activity_cost||0,
+                      meal_cost: totals?.meal_cost||0,
+                    })}>Edit Budget</Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -158,7 +206,7 @@ export default function BudgetScreen({ user, trips }: { user: User; trips: Trip[
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={()=> navigate(`/trip/${tripId}/build`)}>
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Add Expense
                 </Button>

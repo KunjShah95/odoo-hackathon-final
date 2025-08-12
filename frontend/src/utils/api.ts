@@ -167,6 +167,16 @@ export async function getTripBudget(tripId: string, token: string) {
   return res.json();
 }
 
+export async function upsertTripBudget(tripId: string, data: { transport_cost?: number; stay_cost?: number; activity_cost?: number; meal_cost?: number }, token: string) {
+  const res = await fetch(`${API_URL}/budgets/${tripId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Failed to save budget');
+  return res.json();
+}
+
 // Update trip partial (expects camelCase input)
 export async function updateTrip(tripId: string, updates: any, token: string) {
   const payload: any = {};
