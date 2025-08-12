@@ -482,7 +482,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <RealtimeCollabPanel user={user} tripId={tripId!} />
           <CollaboratorsPanel tripId={tripId} />
-          <ExpenseSplitter tripId={tripId!} participants={participants} />
+          <ExpenseSplitter tripId={tripId!} participants={participants} user={user} />
           <PackingListGenerator />
           <MapView trip={{...trip, cities: cities.map(c => c.name)}} />
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">

@@ -60,7 +60,7 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
         email: c.user.email,
         role: c.role
       })));
-      setTimeout(() => setInviteStatus(null), 2000);
+      setTimeout(() => setInviteStatus(null), 3000);
     } catch (e: any) {
       setInviteStatus(null);
       setError(e?.message || 'Invite failed');
@@ -95,6 +95,12 @@ const CollaboratorsPanel: React.FC<CollaboratorsPanelProps> = ({ tripId }) => {
             placeholder="Invite by email..."
             value={inviteEmail}
             onChange={e => setInviteEmail(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !inviting && inviteEmail) {
+                e.preventDefault();
+                handleInvite();
+              }
+            }}
             className="flex-1"
           />
           <Button onClick={handleInvite} disabled={!inviteEmail || inviting}>
