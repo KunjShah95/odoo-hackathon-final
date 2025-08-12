@@ -71,6 +71,18 @@ const TRIP_TEMPLATES = [
   }
 ];
 
+const StatCard = ({ icon, label, value, color, onClick }) => (
+  <button onClick={onClick} className="text-left rounded-2xl shadow-sm border border-border bg-card p-6 flex items-center gap-5 group hover:bg-muted/50 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+    <div className={`w-14 h-14 bg-${color}-100 rounded-xl flex items-center justify-center text-${color}-600`}>
+      {icon}
+    </div>
+    <div>
+      <p className="text-3xl font-bold text-foreground">{value}</p>
+      <p className="text-sm text-muted-foreground font-medium">{label}</p>
+    </div>
+  </button>
+);
+
 export default function DashboardScreen({ user, trips = [], onLogout }: DashboardScreenProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
@@ -201,42 +213,42 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
   };
     
       return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Plane className="w-4 h-4 text-white" />
+      <header className="bg-card/80 border-b border-border sticky top-0 z-40 shadow-sm backdrop-blur-lg animate-fade-in-down">
+        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Plane className="w-5 h-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">GlobeTrotter</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">GlobeTrotter</h1>
             </div>
-            {/* Mobile-optimized header actions */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/search/cities')} className="hidden sm:flex">
-                <Search className="w-4 h-4 mr-2" />
+
+            {/* Centered Navigation */}
+            <nav className="hidden md:flex items-center space-x-2 bg-muted p-2 rounded-full">
+              <Button variant={activeTab === 'overview' ? "primary" : "ghost"} size="sm" onClick={() => setActiveTab('overview')}>Overview</Button>
+              <Button variant={activeTab === 'templates' ? "primary" : "ghost"} size="sm" onClick={() => setActiveTab('templates')}>Templates</Button>
+              <Button variant={activeTab === 'explore' ? "primary" : "ghost"} size="sm" onClick={() => setActiveTab('explore')}>Explore</Button>
+              <Button variant={activeTab === 'recent' ? "primary" : "ghost"} size="sm" onClick={() => setActiveTab('recent')}>Recent</Button>
+            </nav>
+
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <Button variant="outline" size="sm" onClick={() => navigate('/search/cities')} className="hidden sm:flex items-center gap-2">
+                <Search className="w-4 h-4" />
                 Search
               </Button>
-              <div className="flex items-center space-x-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={user?.avatar} alt={user?.name} />
-                  <AvatarFallback>
-                    {(user?.name || 'U').split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
+              <div className="flex items-center space-x-3">
                 <Popover open={showNotifications} onOpenChange={handleToggleNotifications}>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="relative">
-                      <Bell className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" className="relative rounded-full w-10 h-10">
+                      <Bell className="w-5 h-5" />
                       {notifications.some(n => !n.read) && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[10px] rounded-full text-white flex items-center justify-center">
-                          {notifications.filter(n => !n.read).length}
-                        </span>
+                        <span className="absolute top-0 right-0 w-3 h-3 bg-destructive rounded-full border-2 border-card" />
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80">
+                  <PopoverContent align="end" className="w-96">
                     <NotificationCenter
                       notifications={notifications.sort((a,b)=> (a.read?1:0)-(b.read?1:0) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())}
                       onMarkRead={handleMarkRead}
@@ -246,18 +258,27 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     />
                   </PopoverContent>
                 </Popover>
-                <div className="hidden sm:flex items-center space-x-1">
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-                    <Settings className="w-4 h-4" />
+
+                <div className="hidden sm:flex items-center space-x-2">
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10" onClick={() => navigate('/profile')}>
+                    <Settings className="w-5 h-5" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={onLogout}>
-                    <LogOut className="w-4 h-4" />
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10" onClick={onLogout}>
+                    <LogOut className="w-5 h-5" />
                   </Button>
                 </div>
+
+                <Avatar className="w-10 h-10 border-2 border-transparent hover:border-primary transition-colors">
+                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarFallback>
+                    {(user?.name || 'U').split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+
                 {/* Mobile menu button */}
                 <div className="sm:hidden">
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-                    <Settings className="w-4 h-4" />
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10" onClick={() => navigate('/profile')}>
+                    <Settings className="w-5 h-5" />
                   </Button>
                 </div>
               </div>
@@ -266,69 +287,33 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Welcome Section FIRST */}
-        <div className="mb-10">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-blue-900 tracking-tight mb-2">
+        <div className="mb-12 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-3">
             Welcome back, {(user?.name || 'User').split(' ')[0]}!
-            <span className="ml-2">✈️</span>
           </h2>
-          <p className="text-gray-600 text-lg">Ready to plan your next adventure?</p>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Ready to plan your next adventure? Here's a quick overview of your trips.</p>
         </div>
-  <SmartSuggestions trips={trips} />
-        <BadgesPanel />
+
+        <div className="my-8">
+          <SmartSuggestions trips={trips} />
+        </div>
+        <div className="my-8">
+          <BadgesPanel />
+        </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <button onClick={() => navigate('/trips')} className="text-left rounded-xl shadow-md border-0 bg-white">
-            <div className="p-6 flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
-                <MapPin className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{(trips || []).length}</p>
-                <p className="text-sm text-blue-700 font-medium">Total Trips</p>
-              </div>
-            </div>
-          </button>
-          <button onClick={() => setShowBudgetDialog(true)} className="text-left rounded-xl shadow-md border-0 bg-white">
-            <div className="p-6 flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">${(budgetTotals.total || fallbackTotalBudget).toLocaleString()}</p>
-                <p className="text-sm text-green-700 font-medium">Total Budget</p>
-              </div>
-            </div>
-          </button>
-          <Card className="shadow-md border-0">
-            <CardContent className="p-6 flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
-                <Calendar className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{upcomingTrips.length}</p>
-                <p className="text-sm text-purple-700 font-medium">Upcoming</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md border-0">
-            <CardContent className="p-6 flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
-                <Users className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{(trips || []).filter(t => t.isPublic).length}</p>
-                <p className="text-sm text-orange-700 font-medium">Shared</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <StatCard icon={<MapPin className="w-7 h-7" />} label="Total Trips" value={(trips || []).length} color="blue" onClick={() => navigate('/trips')} />
+          <StatCard icon={<DollarSign className="w-7 h-7" />} label="Total Budget" value={`$${(budgetTotals.total || fallbackTotalBudget).toLocaleString()}`} color="green" onClick={() => setShowBudgetDialog(true)} />
+          <StatCard icon={<Calendar className="w-7 h-7" />} label="Upcoming" value={upcomingTrips.length} color="purple" />
+          <StatCard icon={<Users className="w-7 h-7" />} label="Shared" value={(trips || []).filter(t => t.isPublic).length} color="orange" />
         </div>
 
         {/* Main Content with Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-4 rounded-xl bg-blue-50">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 rounded-full bg-muted p-1 md:hidden">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="explore">Explore</TabsTrigger>
@@ -336,18 +321,18 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </TabsList>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <TabsContent value="overview" className="space-y-8 animate-fade-in-down">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               {/* Quick Actions */}
               <div className="lg:col-span-1">
-                <Card className="shadow border-0">
-                  <CardHeader className="bg-blue-50 rounded-t-xl">
-                    <CardTitle className="text-blue-900">Quick Actions</CardTitle>
-                    <CardDescription>Start planning your next adventure</CardDescription>
+                <Card className="shadow-lg border-0 rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-foreground">Quick Actions</CardTitle>
+                    <CardDescription>Start your next adventure</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button 
-                      className="w-full justify-start bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      className="w-full justify-start"
                       onClick={() => navigate('/create-trip')}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -355,7 +340,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     </Button>
                     
                     <Button 
-                      variant="outline" 
+                      variant="secondary"
                       className="w-full justify-start"
                       onClick={() => navigate('/trips')}
                     >
@@ -364,7 +349,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     </Button>
                     
                     <Button 
-                      variant="outline" 
+                      variant="secondary"
                       className="w-full justify-start"
                       onClick={() => navigate('/search/cities')}
                     >
@@ -373,7 +358,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                     </Button>
                     
                     <Button 
-                      variant="outline" 
+                      variant="secondary"
                       className="w-full justify-start"
                       onClick={() => navigate('/search/activities')}
                     >
@@ -381,7 +366,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
                       Find Activities
                     </Button>
                     <Button 
-                      variant="outline" 
+                      variant="secondary"
                       className="w-full justify-start"
                       onClick={() => navigate('/public-boards')}
                     >
@@ -394,11 +379,11 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
 
               {/* Upcoming Trips as Calendar */}
               <div className="lg:col-span-2">
-                <Card>
+                <Card className="shadow-lg border-0 rounded-2xl">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Upcoming (Calendar)</CardTitle>
-                      <CardDescription>Monthly view of your trips</CardDescription>
+                      <CardTitle>Upcoming Trips</CardTitle>
+                      <CardDescription>Your upcoming adventures at a glance</CardDescription>
                     </div>
                     <Link to="/trips"><Button variant="ghost" size="sm">View All</Button></Link>
                   </CardHeader>
@@ -411,8 +396,8 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </TabsContent>
 
           {/* Templates Tab */}
-          <TabsContent value="templates" className="space-y-6">
-            <Card>
+          <TabsContent value="templates" className="space-y-6 animate-fade-in-down">
+            <Card className="shadow-lg border-0 rounded-2xl">
               <CardHeader>
                 <CardTitle>Trip Templates</CardTitle>
                 <CardDescription>Get started quickly with our pre-designed itineraries</CardDescription>
@@ -420,39 +405,38 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(TRIP_TEMPLATES || []).map(template => (
-                    <Card key={template.id} className="group hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="relative h-40 overflow-hidden rounded-t-lg">
+                    <Card key={template.id} className="group hover:shadow-xl transition-shadow cursor-pointer rounded-2xl overflow-hidden border-0">
+                      <div className="relative h-48 overflow-hidden">
                         <ImageWithFallback
                           src={template.image}
                           alt={template.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute top-3 right-3">
-                          <Badge className="bg-white/90 text-gray-800">{template.difficulty}</Badge>
+                        <div className="absolute top-4 right-4">
+                          <Badge variant="secondary">{template.difficulty}</Badge>
                         </div>
                       </div>
                       
-                      <CardContent className="p-4">
+                      <CardContent className="p-5">
                         <div className="space-y-3">
                           <div>
-                          
-                            <h3 className="font-semibold">{template.name}</h3>
-                            <p className="text-sm text-gray-600">{template.description}</p>
+                            <h3 className="font-semibold text-lg">{template.name}</h3>
+                            <p className="text-sm text-muted-foreground">{template.description}</p>
                           </div>
                           
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-1" />
+                          <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-4 h-4" />
                               {template.duration}
                             </div>
-                            <div className="flex items-center">
-                              <MapPin className="w-4 h-4 mr-1" />
-                              {(template.cities || []).length} cities
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-4 h-4" />
+                              {template.cities.length} cities
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-between pt-2">
-                            <span className="font-semibold text-green-600">${template.estimatedCost}</span>
+                          <div className="flex items-center justify-between pt-3">
+                            <span className="font-bold text-lg text-primary">${template.estimatedCost}</span>
                             <Button 
                               size="sm"
                               onClick={() => handleCreateFromTemplate(template)}
@@ -470,28 +454,28 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </TabsContent>
 
           {/* Explore Tab */}
-          <TabsContent value="explore" className="space-y-6">
-            <Card>
+          <TabsContent value="explore" className="space-y-6 animate-fade-in-down">
+            <Card className="shadow-lg border-0 rounded-2xl">
               <CardHeader>
                 <CardTitle>Popular Destinations</CardTitle>
-                <CardDescription>Trending places to visit</CardDescription>
+                <CardDescription>Trending places to visit, suggested for you</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {(POPULAR_DESTINATIONS || []).map(destination => (
                     <div 
                       key={destination.name}
-                      className="relative group cursor-pointer rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                      className="relative group cursor-pointer rounded-xl overflow-hidden hover:shadow-xl transition-shadow"
                       onClick={() => navigate('/search/cities')}
                     >
                       <ImageWithFallback
                         src={destination.image}
                         alt={destination.name}
-                        className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-3 left-3 text-white">
-                        <h4 className="font-semibold text-sm sm:text-base">{destination.name}</h4>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <h4 className="font-semibold text-base sm:text-lg">{destination.name}</h4>
                         <p className="text-xs sm:text-sm opacity-90">{destination.country}</p>
                       </div>
                     </div>
@@ -502,8 +486,8 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </TabsContent>
 
           {/* Recent Tab */}
-          <TabsContent value="recent" className="space-y-6">
-            <Card>
+          <TabsContent value="recent" className="space-y-6 animate-fade-in-down">
+            <Card className="shadow-lg border-0 rounded-2xl">
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>Your latest trip planning activities</CardDescription>
@@ -511,15 +495,15 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
               <CardContent>
                 <div className="space-y-4">
                   {(recentTrips || []).map(trip => (
-                    <div key={trip.id} className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-blue-600" />
+                    <div key={trip.id} className="flex items-center space-x-4 p-4 border rounded-xl hover:bg-muted/50 transition-colors">
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-6 h-6 text-primary" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold">{trip.name}</h4>
-                        <p className="text-sm text-gray-600">Last updated: {new Date(trip.startDate).toLocaleDateString()}</p>
+                        <p className="text-sm text-muted-foreground">Last updated: {new Date(trip.startDate).toLocaleDateString()}</p>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/trip/${trip.id}/view`)}>
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/trip/${trip.id}/view`)}>
                         View
                       </Button>
                     </div>
