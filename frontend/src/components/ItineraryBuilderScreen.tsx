@@ -315,6 +315,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
   const [cities, setCities] = useState<CityStop[]>([]);
   const [loadingStops, setLoadingStops] = useState(false);
   const [stopsError, setStopsError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<{ id:number; name:string }[]>([]);
   // Load stops from backend
   useEffect(() => {
     const loadStops = async () => {
@@ -358,6 +359,17 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
       }
     };
     loadStops();
+    // load participants (owner + collaborators)
+    const token = localStorage.getItem('token');
+    if (tripId && token) {
+      import('../utils/api').then(m=> m.getCollaborators(tripId, token).then(rows => {
+        const collabs = rows.map((c:any)=> ({ id: c.user.id, name: `${c.user.first_name} ${c.user.last_name}`.trim() }));
+        // include owner if not already
+        const ownerId = Number(user.id);
+  if (!collabs.find((c: { id:number; name:string })=> c.id===ownerId)) collabs.unshift({ id: ownerId, name: user.name });
+        setParticipants(collabs);
+      }).catch(()=>{}));
+    }
   }, [tripId]);
 
   const [newCityName, setNewCityName] = useState('');
@@ -462,7 +474,7 @@ export default function ItineraryBuilderScreen({ user, trips, onUpdateTrip }: It
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <RealtimeCollabPanel user={user} tripId={tripId!} />
           <CollaboratorsPanel tripId={tripId} />
-          <ExpenseSplitter />
+          <ExpenseSplitter tripId={tripId!} participants={participants} />
           <PackingListGenerator />
           <MapView trip={trip} />
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">

@@ -275,7 +275,7 @@ export default function DashboardScreen({ user, trips = [], onLogout }: Dashboar
           </h2>
           <p className="text-gray-600 text-lg">Ready to plan your next adventure?</p>
         </div>
-        <SmartSuggestions />
+  <SmartSuggestions trips={trips} />
         <BadgesPanel />
 
         {/* Quick Stats */}

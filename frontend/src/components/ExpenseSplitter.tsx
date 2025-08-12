@@ -1,71 +1,107 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { DollarSign, User } from 'lucide-react';
+import { DollarSign, Trash2 } from 'lucide-react';
+import { addExpense, getExpenses, deleteExpense, getTripSettlement, setExpenseShares } from '../utils/api';
 
-interface Expense {
-  id: number;
-  description: string;
-  amount: number;
-  paidBy: string;
-}
+interface ExpenseBackend { id:number; description?:string; amount:number; category:string; user_id:number; }
+interface Participant { id:number; name:string; }
 
-const DEMO_USERS = ['Varad', 'Kunj', 'You'];
+interface ExpenseSplitterProps { tripId: string; participants: Participant[]; }
 
-const ExpenseSplitter: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+const ExpenseSplitter: React.FC<ExpenseSplitterProps> = ({ tripId, participants }) => {
+  const token = localStorage.getItem('token') || '';
+  const [expenses, setExpenses] = useState<ExpenseBackend[]>([]);
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState(DEMO_USERS[0]);
+  const [category, setCategory] = useState('general');
+  const [settlement, setSettlement] = useState<{ user_id:number; net:number }[] | null>(null);
+  const [sharesDraft, setSharesDraft] = useState<Record<number, number>>({});
+  const [selectedExpense, setSelectedExpense] = useState<number | null>(null);
 
-  const addExpense = () => {
-    if (!desc || !amount || isNaN(Number(amount))) return;
-    setExpenses([
-      ...expenses,
-      { id: Date.now(), description: desc, amount: Number(amount), paidBy }
-    ]);
-    setDesc('');
-    setAmount('');
+  useEffect(()=>{ if(token) refresh(); }, [tripId]);
+
+  function refresh() {
+    getExpenses(tripId, token).then(setExpenses).catch(()=>{});
+    getTripSettlement(tripId, token).then(r=> setSettlement(r.settlements)).catch(()=>{});
+  }
+
+  const add = () => {
+    if(!desc || !amount) return;
+    addExpense(tripId, { category, amount: Number(amount), description: desc }, token).then(()=>{
+      setDesc(''); setAmount(''); refresh();
+    }).catch(()=>{});
+  };
+  const remove = (id:number) => { deleteExpense(id, token).then(()=>refresh()).catch(()=>{}); };
+
+  const openShares = (id:number) => { setSelectedExpense(id); const equal = 1 / participants.length; const draft:Record<number,number>={}; participants.forEach(p=> draft[p.id]=equal); setSharesDraft(draft); };
+  const saveShares = () => {
+    if(selectedExpense==null) return; const shares = Object.entries(sharesDraft).map(([uid, share])=>({ user_id:Number(uid), share_amount: Number(share)}));
+    setExpenseShares(selectedExpense, shares, token).then(()=>{ setSelectedExpense(null); refresh(); }).catch(()=>{});
   };
 
-  // Calculate who owes whom (very basic logic for demo)
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const perPerson = total / DEMO_USERS.length;
-  const paid: Record<string, number> = {};
-  DEMO_USERS.forEach(u => (paid[u] = 0));
-  expenses.forEach(e => (paid[e.paidBy] += e.amount));
+  const total = expenses.reduce((s,e)=> s + Number(e.amount), 0);
 
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-green-600" /> Expense Splitter
-        </CardTitle>
+        <CardTitle className="flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-600" /> Expenses & Split</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex gap-2 mb-4">
-          <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} />
-          <Input placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} type="number" />
-          <select value={paidBy} onChange={e => setPaidBy(e.target.value)} className="border rounded px-2 py-1">
-            {DEMO_USERS.map(u => <option key={u}>{u}</option>)}
-          </select>
-          <Button onClick={addExpense} disabled={!desc || !amount}>Add</Button>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Input placeholder="Description" value={desc} onChange={e=>setDesc(e.target.value)} className="w-40" />
+            <Input placeholder="Amount" type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-28" />
+            <Input placeholder="Category" value={category} onChange={e=>setCategory(e.target.value)} className="w-28" />
+            <Button onClick={add} disabled={!desc || !amount}>Add</Button>
+          <div className="ml-auto font-semibold">Total: ${total.toFixed(2)}</div>
         </div>
-        <ul className="mb-4 space-y-1">
-          {expenses.map(e => (
-            <li key={e.id} className="flex gap-2 text-gray-700">
-              <User className="w-4 h-4 text-blue-400" />
-              <span>{e.paidBy} paid ${e.amount} for {e.description}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="font-medium text-green-700 mb-2">Total: ${total.toFixed(2)} | Per Person: ${perPerson.toFixed(2)}</div>
-        <div className="text-sm text-gray-600">
-          {DEMO_USERS.map(u => (
-            <div key={u}>{u} paid ${paid[u].toFixed(2)} ({paid[u] > perPerson ? 'gets back' : 'owes'} ${(Math.abs(paid[u] - perPerson)).toFixed(2)})</div>
-          ))}
-        </div>
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-gray-500"><th>Description</th><th>Amount</th><th>Category</th><th /></tr></thead>
+          <tbody>
+            {expenses.map(e=> (
+              <tr key={e.id} className="border-t">
+                <td className="py-1">{e.description || '—'}</td>
+                <td>${Number(e.amount).toFixed(2)}</td>
+                <td>{e.category}</td>
+                <td className="text-right space-x-2">
+                  <Button size="sm" variant="outline" onClick={()=> openShares(e.id)}>Shares</Button>
+                  <Button size="sm" variant="ghost" onClick={()=> remove(e.id)}><Trash2 className="w-4 h-4" /></Button>
+                </td>
+              </tr>
+            ))}
+            {expenses.length===0 && <tr><td colSpan={4} className="text-center text-gray-400 py-4">No expenses yet</td></tr>}
+          </tbody>
+        </table>
+
+        {selectedExpense && (
+          <div className="p-3 border rounded-md bg-gray-50 space-y-2">
+            <div className="font-medium">Set Shares (fractions summing to 1)</div>
+            {participants.map(p=> (
+              <div key={p.id} className="flex items-center gap-2">
+                <span className="w-32 truncate">{p.name}</span>
+                <Input type="number" step="0.01" value={sharesDraft[p.id] ?? ''} onChange={e=> setSharesDraft(prev=> ({ ...prev, [p.id]: Number(e.target.value) }))} className="w-24" />
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveShares}>Save</Button>
+              <Button size="sm" variant="outline" onClick={()=> setSelectedExpense(null)}>Cancel</Button>
+              <div className="text-xs text-gray-500 ml-auto">Σ = {Object.values(sharesDraft).reduce((s,v)=> s+ (Number(v)||0),0).toFixed(2)}</div>
+            </div>
+          </div>
+        )}
+
+        {settlement && (
+          <div className="p-3 border rounded-md bg-white">
+            <div className="font-medium mb-2">Settlement</div>
+            <ul className="space-y-1 text-xs">
+              {settlement.map(s=> {
+                const p = participants.find(pp=> pp.id===s.user_id); const name = p? p.name : `User ${s.user_id}`;
+                return <li key={s.user_id} className={s.net>=0? 'text-green-600':'text-red-600'}>{name}: {s.net>=0? 'gets': 'owes'} ${Math.abs(s.net).toFixed(2)}</li>;
+              })}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

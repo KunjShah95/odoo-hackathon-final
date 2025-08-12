@@ -3,15 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Share2, Copy, Facebook, Twitter, ArrowLeft, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { Share2, Copy, Facebook, Twitter, ArrowLeft, MapPin, Calendar, DollarSign, Download } from 'lucide-react';
 import { Trip } from '../types';
 import { getTripDuration, copyToClipboard, formatDate } from '../utils';
 
 interface SharedItineraryScreenProps {
   trips: Trip[];
+  publicKey?: string; // if provided enable ICS/PDF direct downloads
 }
 
-export default function SharedItineraryScreen({ trips }: SharedItineraryScreenProps) {
+export default function SharedItineraryScreen({ trips, publicKey }: SharedItineraryScreenProps) {
   const navigate = useNavigate();
   const { tripId } = useParams();
   const trip = trips.find(t => t.id === tripId);
@@ -20,7 +21,7 @@ export default function SharedItineraryScreen({ trips }: SharedItineraryScreenPr
     return <div>Trip not found</div>;
   }
 
-  const shareUrl = `${window.location.origin}/trip/${tripId}/share`;
+  const shareUrl = publicKey ? `${window.location.origin}/public/${publicKey}` : `${window.location.origin}/trip/${tripId}/share`;
   const duration = getTripDuration(trip.startDate, trip.endDate);
 
   const handleCopyLink = () => copyToClipboard(shareUrl);
@@ -71,7 +72,7 @@ export default function SharedItineraryScreen({ trips }: SharedItineraryScreenPr
                   </Button>
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 flex-wrap">
                   <Button variant="outline" size="sm">
                     <Facebook className="w-4 h-4 mr-2" />
                     Facebook
@@ -84,6 +85,16 @@ export default function SharedItineraryScreen({ trips }: SharedItineraryScreenPr
                     <Share2 className="w-4 h-4 mr-2" />
                     More
                   </Button>
+                  {publicKey && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => window.open(`/api/calendar/trip/${publicKey}.ics`, '_blank') }>
+                        <Download className="w-4 h-4 mr-2" /> ICS
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open(`/api/pdf-export/${tripId}?token=${localStorage.getItem('token')}`,'_blank') }>
+                        <Download className="w-4 h-4 mr-2" /> PDF
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>

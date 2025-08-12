@@ -49,14 +49,15 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
   });
 
   const handleSave = () => {
-    onUpdateUser({
-      ...user,
-      name: formData.name,
-      email: formData.email,
-      avatar: formData.avatar,
-      currency_preference: formData.currency_preference,
-    });
-    setIsEditing(false);
+    import('../utils/api').then(m => m.updateProfile({
+      first_name: formData.name.split(' ')[0],
+      last_name: formData.name.split(' ').slice(1).join(' '),
+      photo_url: formData.avatar,
+      currency_preference: formData.currency_preference
+    }).then(r => {
+      onUpdateUser({ ...user, name: formData.name, email: formData.email, avatar: formData.avatar, currency_preference: formData.currency_preference });
+      setIsEditing(false);
+    }).catch(()=>{}));
   };
 
   const handleDeleteAccount = () => {
@@ -118,24 +119,35 @@ export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileS
                   </Avatar>
                   
                   {isEditing && (
-                    <div className="flex-1">
-                      <Label htmlFor="avatar">Profile Photo URL</Label>
-                      <Input
-                        id="avatar"
-                        placeholder="https://example.com/photo.jpg"
-                        value={formData.avatar}
-                        onChange={(e) => setFormData(prev => ({ ...prev, avatar: e.target.value }))}
-                      />
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <Label htmlFor="avatar">Profile Photo URL</Label>
+                        <Input
+                          id="avatar"
+                          placeholder="https://example.com/photo.jpg"
+                          value={formData.avatar}
+                          onChange={(e) => setFormData(prev => ({ ...prev, avatar: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="avatarFile">Or Upload Image</Label>
+                        <Input id="avatarFile" type="file" accept="image/*" onChange={async (e)=>{
+                          const file = e.target.files?.[0];
+                          if(!file) return;
+                          const token = localStorage.getItem('token');
+                          if(!token) return;
+                          const fd = new FormData(); fd.append('file', file);
+                          try {
+                            const res = await fetch(`${(import.meta as any).env.VITE_API_URL}/media/upload`, { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body: fd });
+                            if(res.ok){ const j = await res.json(); setFormData(prev=> ({ ...prev, avatar: j.url })); }
+                          } catch {}
+                        }} />
+                      </div>
                     </div>
                   )}
                   
                   {!isEditing && (
-                    <div>
-                      <Button variant="outline" size="sm">
-                        <Camera className="w-4 h-4 mr-2" />
-                        Change Photo
-                      </Button>
-                    </div>
+                    <div className="text-xs text-gray-500">Edit profile to change photo</div>
                   )}
                 </div>
 

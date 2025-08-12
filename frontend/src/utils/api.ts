@@ -41,6 +41,11 @@ export function getTripPDFUrl(tripId: string) {
   return `${API_URL}/pdf-export/${tripId}?token=${token}`;
 }
 
+// ICS Export (public) - requires public key (from share API)
+export function getTripICSUrl(publicKey: string) {
+  return `${API_URL}/calendar/trip/${publicKey}.ics`;
+}
+
 // Notifications (normalize to array of simple objects for dashboard)
 export async function getNotifications(token: string) {
   const res = await fetch(`${API_URL}/notifications`, {
@@ -288,9 +293,155 @@ export async function getNearbyPlaces(params: { lat: number; lon: number; radius
   return res.json();
 }
 
+// Public nearby (no auth) fallback
+export async function getPublicNearbyPlaces(params: { lat: number; lon: number; radius?: number; limit?: number }) {
+  const qp = new URLSearchParams({ lat: String(params.lat), lon: String(params.lon) });
+  if (params.radius) qp.set('radius', String(params.radius));
+  if (params.limit) qp.set('limit', String(params.limit));
+  const res = await fetch(`${API_URL}/places/public-nearby?${qp.toString()}`);
+  if (!res.ok) throw new Error('Failed to fetch public nearby places');
+  return res.json();
+}
+
 // Wikipedia summary (no auth required)
 export async function getWikiSummary(title: string) {
   const res = await fetch(`${API_URL}/integrations/wiki/summary?title=${encodeURIComponent(title)}`);
   if (!res.ok) return null;
+  return res.json();
+}
+
+// Wikipedia search (top result) for fallback image/title
+export async function searchWiki(query: string) {
+  const res = await fetch(`${API_URL}/integrations/wiki/search?query=${encodeURIComponent(query)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Generic search helpers
+export async function searchCities(q: string) {
+  const res = await fetch(`${API_URL}/search/cities?q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error('Failed city search');
+  return res.json();
+}
+
+export async function searchTrips(q: string, token?: string, userId?: string | number) {
+  const qp = new URLSearchParams({ q });
+  if (userId) qp.set('userId', String(userId));
+  const res = await fetch(`${API_URL}/search/trips?${qp.toString()}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+  if (!res.ok) throw new Error('Failed trip search');
+  return res.json();
+}
+
+export async function searchActivities(q: string) {
+  const res = await fetch(`${API_URL}/search/activities?q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error('Failed activity search');
+  return res.json();
+}
+
+export async function searchUsers(q: string) {
+  const res = await fetch(`${API_URL}/search/users?q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error('Failed user search');
+  return res.json();
+}
+
+export async function searchPlaces(q: string, opts: { lat?: number; lon?: number; radius?: number; limit?: number } = {}) {
+  const qp = new URLSearchParams({ q });
+  if (opts.lat) qp.set('lat', String(opts.lat));
+  if (opts.lon) qp.set('lon', String(opts.lon));
+  if (opts.radius) qp.set('radius', String(opts.radius));
+  if (opts.limit) qp.set('limit', String(opts.limit));
+  const res = await fetch(`${API_URL}/search/places?${qp.toString()}`);
+  if (!res.ok) throw new Error('Failed place search');
+  return res.json();
+}
+
+export async function fetchImages(query: string) {
+  const res = await fetch(`${API_URL}/integrations/images?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Failed image search');
+  return res.json();
+}
+
+// Profile update
+export async function updateProfile(updates: any) {
+  const token = localStorage.getItem('token');
+  if(!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_URL}/auth/profile`, { method:'PUT', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(updates) });
+  if(!res.ok) throw new Error('Failed to update profile');
+  return res.json();
+}
+
+// Currency convert helper
+export async function convertCurrency(amount:number, base:string, targets:string[]){
+  const token = localStorage.getItem('token');
+  if(!token) throw new Error('Not authenticated');
+  const qp = new URLSearchParams({ amount:String(amount), base, targets: targets.join(',') });
+  const res = await fetch(`${API_URL}/currency/convert?${qp.toString()}`, { headers: { Authorization:`Bearer ${token}` }});
+  if(!res.ok) throw new Error('Failed to convert currency');
+  return res.json();
+}
+
+// Expenses basic CRUD (owner only currently)
+export async function getExpenses(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/expenses/${tripId}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Failed to load expenses');
+  return res.json();
+}
+export async function addExpense(tripId: string, data: { category:string; amount:number; currency?:string; description?:string; date?:string }, token: string) {
+  const res = await fetch(`${API_URL}/expenses/${tripId}`, { method:'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) });
+  if (!res.ok) throw new Error('Failed to add expense');
+  return res.json();
+}
+export async function deleteExpense(expenseId: number, token: string) {
+  const res = await fetch(`${API_URL}/expenses/${expenseId}`, { method:'DELETE', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Failed to delete expense');
+  return res.json();
+}
+
+// Collaboration persistent messages
+
+// Admin APIs
+export async function adminBootstrap() {
+  const res = await fetch(`${API_URL}/admin/bootstrap`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed admin bootstrap');
+  return res.json();
+}
+
+export async function adminLogin(email: string, password: string) {
+  const res = await fetch(`${API_URL}/admin/login`, { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ email, password }) });
+  if (!res.ok) throw new Error('Admin login failed');
+  return res.json();
+}
+
+export async function adminSeed(token: string) {
+  const res = await fetch(`${API_URL}/admin/seed`, { method:'POST', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Admin seed failed');
+  return res.json();
+}
+
+export async function adminAnalytics(token: string) {
+  const res = await fetch(`${API_URL}/admin/analytics`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Admin analytics failed');
+  return res.json();
+}
+export async function getCollabMessages(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/collab/${tripId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Failed to fetch messages');
+  return res.json();
+}
+export async function postCollabMessage(tripId: string, text: string, token: string) {
+  const res = await fetch(`${API_URL}/collab/${tripId}/messages`, { method:'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ text }) });
+  if (!res.ok) throw new Error('Failed to post message');
+  return res.json();
+}
+
+// Expense sharing
+export async function setExpenseShares(expenseId: number|string, shares: { user_id: number; share_amount: number }[], token: string) {
+  const res = await fetch(`${API_URL}/expense-sharing/${expenseId}/shares`, { method:'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ shares }) });
+  if (!res.ok) throw new Error('Failed to set shares');
+  return res.json();
+}
+export async function getTripSettlement(tripId: string, token: string) {
+  const res = await fetch(`${API_URL}/expense-sharing/trip/${tripId}/settlement`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('Failed to get settlement');
   return res.json();
 }

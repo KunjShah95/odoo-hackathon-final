@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getSocket } from '../utils/realtime';
+import { Socket } from 'socket.io-client';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { User } from '../types';
 import { Send, Wifi, Activity } from 'lucide-react';
+import { getCollabMessages, postCollabMessage } from '../utils/api';
 
 interface Message {
   id: string;
@@ -34,38 +37,45 @@ export default function RealtimeCollabPanel({ user, tripId }: RealtimeCollabPane
   const [messages, setMessages] = useState<Message[]>([]);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [text, setText] = useState('');
-  const channelRef = useRef<BroadcastChannel | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Initialize broadcast channel for local tab real-time simulation
+  // Load persisted messages once
   useEffect(() => {
-    const channel = new BroadcastChannel(`trip-${tripId}-collab`);
-    channelRef.current = channel;
+    const token = localStorage.getItem('token') || '';
+    if (!token) return;
+    getCollabMessages(tripId, token).then((rows:any[])=>{
+      const mapped = rows.map(r=>({ id: String(r.id), userId: String(r.user_id), userName: r.user_name || 'User', text: r.text, ts: new Date(r.created_at).getTime() }));
+      setMessages(mapped);
+    }).catch(()=>{});
+  }, [tripId]);
+
+  // Initialize socket.io collaboration
+  useEffect(() => {
+    const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
+    const socket = getSocket(apiUrl);
+    socketRef.current = socket;
     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-
-    const announce = () => channel.postMessage({ type: 'presence', user: { id: user.id, name: user.name, color, ts: Date.now() } });
-    announce();
-    const ping = setInterval(announce, 5000);
-
-    channel.onmessage = (ev) => {
-      const data = ev.data;
-      if (data.type === 'presence') {
+    if (socket) {
+      socket.emit('join_trip', tripId);
+    }
+    // send presence ping
+    const sendPresence = () => socket.emit('collab_message', { tripId, system: true, presence: true, user: { id: user.id, name: user.name, color } });
+    sendPresence();
+    const ping = setInterval(sendPresence, 5000);
+    socket.on('collab_message', (payload: any) => {
+      if (payload?.presence && payload.user) {
+        const pu = payload.user;
         setPresence(prev => {
-          const existing = prev.find(p => p.id === data.user.id);
-          if (existing) {
-            return prev.map(p => p.id === data.user.id ? { ...p, lastPing: Date.now() } : p);
-          }
-          return [...prev, { id: data.user.id, name: data.user.name, color: data.user.color, lastPing: Date.now() }];
+          const existing = prev.find(p => p.id === pu.id);
+          if (existing) return prev.map(p => p.id === pu.id ? { ...p, lastPing: Date.now() } : p);
+          return [...prev, { id: pu.id, name: pu.name, color: pu.color, lastPing: Date.now() }];
         });
-      } else if (data.type === 'message') {
-        setMessages(prev => [...prev, data.message]);
+      } else if (payload?.text) {
+        setMessages(prev => [...prev, { id: String(payload.ts), userId: payload.user.id, userName: payload.user.name, text: payload.text, ts: payload.ts }]);
       }
-    };
-
-    return () => {
-      clearInterval(ping);
-      channel.close();
-    };
+    });
+    return () => { clearInterval(ping); };
   }, [tripId, user.id, user.name]);
 
   // Cleanup stale presence (10s timeout)
@@ -83,16 +93,12 @@ export default function RealtimeCollabPanel({ user, tripId }: RealtimeCollabPane
   }, [messages]);
 
   const sendMessage = () => {
-    if (!text.trim() || !channelRef.current) return;
-    const message: Message = {
-      id: `${Date.now()}`,
-      userId: user.id,
-      userName: user.name,
-      text: text.trim(),
-      ts: Date.now()
-    };
-    channelRef.current.postMessage({ type: 'message', message });
-    setMessages(prev => [...prev, message]);
+  if (!text.trim() || !socketRef.current) return;
+  const payload = { tripId, user: { id: user.id, name: user.name }, text: text.trim() };
+  socketRef.current.emit('collab_message', payload);
+  // persist
+  const token = localStorage.getItem('token') || '';
+  if (token) postCollabMessage(tripId, text.trim(), token).catch(()=>{});
     setText('');
   };
 
@@ -143,7 +149,7 @@ export default function RealtimeCollabPanel({ user, tripId }: RealtimeCollabPane
             <Send className="w-4 h-4 mr-1" /> Send
           </Button>
         </div>
-        <p className="text-[10px] text-gray-400 flex items-center space-x-1"><Activity className="w-3 h-3 mr-1" /> Demo real-time is local-tab only. Upgrade to WebSocket backend for multi-user.</p>
+  <p className="text-[10px] text-gray-400 flex items-center space-x-1"><Activity className="w-3 h-3 mr-1" /> Real-time powered by WebSockets.</p>
       </CardContent>
     </Card>
   );
