@@ -5,6 +5,16 @@ import { verifyToken } from '../middleware/authMiddleware.js';
 import { convertToCurrencies } from '../utils/currency.js';
 const router = express.Router();
 
+// Access helper: owner or collaborator can view
+async function hasTripAccess(tripId, userId) {
+  const tripR = await pool.query('SELECT user_id FROM trips WHERE id=$1', [tripId]);
+  if (tripR.rowCount === 0) return { ok: false, ownerId: null };
+  const ownerId = tripR.rows[0].user_id;
+  if (ownerId === userId) return { ok: true, ownerId };
+  const collab = await pool.query('SELECT 1 FROM trip_collaborators WHERE trip_id=$1 AND user_id=$2', [tripId, userId]);
+  return { ok: collab.rowCount > 0, ownerId };
+}
+
 // Create or update budget for trip (upsert style)
 router.post('/:tripId', verifyToken, async (req, res) => {
   try {
@@ -37,9 +47,12 @@ router.get('/:tripId', verifyToken, async (req, res) => {
   try {
     const { tripId } = req.params;
     const userId = req.user.id;
-    // Get trip info for user and dates
-    const tripR = await pool.query('SELECT * FROM trips WHERE id=$1 AND user_id=$2', [tripId, userId]);
-    if (tripR.rowCount === 0) return res.status(404).json({ error: 'Trip not found' });
+  // Access check (owner or collaborator can view budget)
+  const access = await hasTripAccess(tripId, userId);
+  if (!access.ok) return res.status(403).json({ error: 'Forbidden' });
+  // Get trip info for dates
+  const tripR = await pool.query('SELECT * FROM trips WHERE id=$1', [tripId]);
+  if (tripR.rowCount === 0) return res.status(404).json({ error: 'Trip not found' });
     const trip = tripR.rows[0];
 
     const b = await pool.query('SELECT * FROM budgets WHERE trip_id=$1', [tripId]);
